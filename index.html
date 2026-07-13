@@ -1,11 +1,10 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>景品設定管理</title>
   
-  <!-- PWA化のための設定 -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#4B6B73">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,25 +12,17 @@
   <meta name="apple-mobile-web-app-title" content="設定管理">
   <link rel="apple-touch-icon" href="./icon.svg">
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- Service Worker の登録 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js')
-          .then(registration => {
-            console.log('ServiceWorker 登録成功:', registration.scope);
-          })
-          .catch(err => {
-            console.log('ServiceWorker 登録失敗:', err);
-          });
+          .catch(err => console.log('SW failed:', err));
       });
     }
   </script>
@@ -41,52 +32,27 @@
     import { createRoot } from "https://esm.sh/react-dom@18/client";
     import { Search, Plus, ChevronLeft, ChevronDown, ChevronUp, History, Save, Loader2, Database, Download, Upload } from "https://esm.sh/lucide-react@0.344.0";
 
-    // ブラウザ用のストレージモック
     if (typeof window !== "undefined" && !window.storage) {
       window.storage = {
-        get: async (key) => {
-          const val = localStorage.getItem(key);
-          return val ? { value: val } : null;
-        },
-        set: async (key, value) => {
-          localStorage.setItem(key, value);
-        }
+        get: async (key) => { const val = localStorage.getItem(key); return val ? { value: val } : null; },
+        set: async (key, value) => { localStorage.setItem(key, value); }
       };
     }
 
-    const COLORS = {
-      bgVoid: "#FFFFFF",
-      panel: "#FAFAF8",
-      panel2: "#F1EFEA",
-      border: "#E1DED6",
-      magenta: "#4B6B73",
-      magentaDim: "#E4ECEB",
-      cyan: "#7C97A0",
-      cyanDim: "#DEE6E4",
-      textHi: "#2E2C29",
-      textMid: "#8C877C",
-      amber: "#A8763A",
-      green: "#5F8267",
-      screenBg: "#F2F5F4",
-    };
-
+    const COLORS = { bgVoid: "#FFFFFF", panel: "#FAFAF8", panel2: "#F1EFEA", border: "#E1DED6", magenta: "#4B6B73", magentaDim: "#E4ECEB", cyan: "#7C97A0", cyanDim: "#DEE6E4", textHi: "#2E2C29", textMid: "#8C877C", amber: "#A8763A", green: "#5F8267", screenBg: "#F2F5F4" };
     const MACHINES = ["クレナハイブリッド", "クレナ3Jack", "クレナ3", "クレナマルチ", "ジェミニマルチ", "ジェミニ80", "デカクレ"];
     const MACHINE_DEFAULT_TYPE = { クレナハイブリッド: "power", "クレナ3Jack": "power", "クレナ3": "power", クレナマルチ: "power", ジェミニマルチ: "catchtop", ジェミニ80: "catchtop", デカクレ: "catchtop" };
 
     function todayStr() {
-      const d = new Date();
-      const tz = d.getTimezoneOffset() * 60000;
-      return new Date(d.getTime() - tz).toISOString().slice(0, 10);
+      const d = new Date(); return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
     }
     function fmtYen(n) { return (n === null || n === undefined || Number.isNaN(n)) ? "-" : "¥" + Math.round(n).toLocaleString("ja-JP"); }
     function calcRequiredRevenue(cost, ratePercent) {
-      const c = Number(cost), r = Number(ratePercent);
-      return (!c || c <= 0 || !r || r <= 0) ? null : c / (r / 100);
+      const c = Number(cost), r = Number(ratePercent); return (!c || c <= 0 || !r || r <= 0) ? null : c / (r / 100);
     }
     function calcFlat(revenue, price) {
       if (!revenue || !price || price <= 0) return null;
-      const plays = Math.ceil(revenue / price);
-      return { plays, total: plays * price };
+      const plays = Math.ceil(revenue / price); return { plays, total: plays * price };
     }
     function calcPack(revenue, single, pack, packCount) {
       if (!revenue || !single || !pack || !packCount || packCount <= 0) return null;
@@ -110,12 +76,10 @@
       );
     }
 
-    const inputBase = { width: "100%", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: "10px", padding: "10px 12px", color: COLORS.textHi, fontSize: "16px", outline: "none" }; // font-size 16px to prevent iOS auto-zoom
+    const inputBase = { width: "100%", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: "10px", padding: "10px 12px", color: COLORS.textHi, fontSize: "16px", outline: "none" };
     function TextInput(props) { return <input {...props} style={{ ...inputBase, ...(props.style || {}) }} />; }
     function TextArea(props) { return <textarea {...props} style={{ ...inputBase, resize: "vertical", minHeight: "70px", ...(props.style || {}) }} />; }
-    function Select({ value, onChange, options }) {
-      return <select value={value} onChange={onChange} style={{ ...inputBase, appearance: "none" }}>{options.map(o => <option key={o} value={o}>{o}</option>)}</select>;
-    }
+    function Select({ value, onChange, options }) { return <select value={value} onChange={onChange} style={{ ...inputBase, appearance: "none" }}>{options.map(o => <option key={o} value={o}>{o}</option>)}</select>; }
     function Segmented({ options, value, onChange }) {
       return (
         <div className="flex rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORS.border}` }}>
@@ -187,9 +151,7 @@
       );
     }
 
-    function emptyForm() {
-      return { machine: MACHINES[0], itemName: "", date: todayStr(), cost: "", rate: "", setter: "", reason: "", notes: "", settingType: MACHINE_DEFAULT_TYPE[MACHINES[0]], leftPower: "", rightPower: "", catchValue: "", topValue: "" };
-    }
+    function emptyForm() { return { machine: MACHINES[0], itemName: "", date: todayStr(), cost: "", rate: "", setter: "", reason: "", notes: "", settingType: MACHINE_DEFAULT_TYPE[MACHINES[0]], leftPower: "", rightPower: "", catchValue: "", topValue: "" }; }
 
     function NewEntryForm({ onSaved }) {
       const [form, setForm] = useState(emptyForm());
@@ -201,31 +163,21 @@
 
       async function handleSave() {
         if (!isValid || saving) return;
-        setSaving(true);
-        setMessage(null);
+        setSaving(true); setMessage(null);
         try {
           const id = newId();
           const version = { version: 1, createdAt: new Date().toISOString(), ...form };
           const groupObj = { id, itemName: form.itemName, machine: form.machine, versions: [version] };
           await window.storage.set(`group_${id}`, JSON.stringify(groupObj));
-
           let index = [];
           const res = await window.storage.get("groups_index");
           if (res && res.value) index = JSON.parse(res.value);
-          
           const summary = { id, itemName: form.itemName, machine: form.machine, latestDate: form.date, latestSetter: form.setter, versionCount: 1, latestCost: form.cost, latestRate: form.rate };
           const newIndex = [summary, ...index];
           await window.storage.set("groups_index", JSON.stringify(newIndex));
-
-          onSaved(newIndex);
-          setForm(emptyForm());
-          setMessage({ type: "ok", text: "保存しました。" });
-          setTimeout(() => setMessage(null), 3000);
-        } catch (e) {
-          setMessage({ type: "err", text: "保存に失敗しました。" });
-        } finally {
-          setSaving(false);
-        }
+          onSaved(newIndex); setForm(emptyForm());
+          setMessage({ type: "ok", text: "保存しました。" }); setTimeout(() => setMessage(null), 3000);
+        } catch (e) { setMessage({ type: "err", text: "保存に失敗しました。" }); } finally { setSaving(false); }
       }
 
       return (
@@ -248,189 +200,19 @@
           <SettingValueFields settingType={form.settingType} values={form} onChange={v => update(v)} />
           <Field label="変更理由" required><TextArea value={form.reason} onChange={e => update({ reason: e.target.value })} /></Field>
           <Field label="備考"><TextArea value={form.notes} onChange={e => update({ notes: e.target.value })} /></Field>
-          
           {message && <div className="text-sm mb-4 px-3 py-2 rounded-lg font-bold text-center" style={{ color: message.type === "ok" ? COLORS.green : COLORS.amber, background: COLORS.panel2 }}>{message.text}</div>}
-          
-          <button type="button" disabled={!isValid || saving} onClick={handleSave} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-base shadow-sm" style={{ background: isValid ? COLORS.magenta : COLORS.panel2, color: isValid ? "#FFFFFF" : COLORS.textMid, transition: "0.2s" }}>
-            <Save size={18} /> 保存する
-          </button>
+          <button type="button" disabled={!isValid || saving} onClick={handleSave} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-base shadow-sm" style={{ background: isValid ? COLORS.magenta : COLORS.panel2, color: isValid ? "#FFFFFF" : COLORS.textMid, transition: "0.2s" }}><Save size={18} /> 保存する</button>
         </div>
       );
     }
 
-    function SearchAndList({ index, indexLoaded, onOpenGroup }) {
-      const [query, setQuery] = useState("");
-      const [machineFilter, setMachineFilter] = useState("すべて");
-      const filtered = index.filter(g => {
-        const matchesQuery = query.trim() === "" || g.itemName.toLowerCase().includes(query.trim().toLowerCase());
-        const matchesMachine = machineFilter === "すべて" || g.machine === machineFilter;
-        return matchesQuery && matchesMachine;
-      });
+    function HistoryItem({ version, isLatest }) {
+      const [open, setOpen] = useState(isLatest);
+      const revenue = calcRequiredRevenue(version.cost, version.rate);
+      const flat = revenue ? calcFlat(revenue, 100) : null;
 
       return (
-        <div className="pb-24">
-          <div className="mb-3 relative">
-            <Search size={18} color={COLORS.textMid} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
-            <TextInput value={query} onChange={e => setQuery(e.target.value)} placeholder="景品名で検索" style={{ paddingLeft: 42 }} />
-          </div>
-          <div className="mb-4"><Select value={machineFilter} onChange={e => setMachineFilter(e.target.value)} options={["すべて", ...MACHINES]} /></div>
-          {indexLoaded && filtered.map(g => (
-            <button key={g.id} type="button" onClick={() => onOpenGroup(g.id)} className="w-full text-left rounded-xl p-4 mb-3 shadow-sm active:scale-95 transition-transform" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}` }}>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs font-bold uppercase" style={{ color: COLORS.cyan }}>{g.machine}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: COLORS.panel2, color: COLORS.textMid }}>v{g.versionCount}</span>
-              </div>
-              <div className="font-bold mb-1 text-lg" style={{ color: COLORS.textHi }}>{g.itemName}</div>
-              <div className="text-xs" style={{ color: COLORS.textMid }}>最終更新: {g.latestDate}</div>
-            </button>
-          ))}
-        </div>
-      );
-    }
+        <div className="rounded-xl mb-2 overflow-hidden" style={{ border: `1px solid ${isLatest ? COLORS.magenta : COLORS.border}`, background: COLORS.panel }}>
+          <button type="button" onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-4 py-3">
+            <div className="flex items
 
-    function DataManager({ index, onIndexUpdate }) {
-      const fileInputRef = useRef(null);
-      const [message, setMessage] = useState("");
-
-      async function exportCSV() {
-        if (index.length === 0) return setMessage("データがありません。");
-        let csv = "ID,機種,景品名,バージョン,設定日,原価,原価率,設定者,変更理由,備考,設定タイプ,左パワー,右パワー,Catch,Top,作成日時\n";
-        for (const summary of index) {
-          const gRes = await window.storage.get(`group_${summary.id}`);
-          if (gRes && gRes.value) {
-            const group = JSON.parse(gRes.value);
-            for (const v of group.versions) {
-              const row = [group.id, group.machine, group.itemName, v.version, v.date, v.cost, v.rate, v.setter, v.reason, v.notes, v.settingType, v.leftPower, v.rightPower, v.catchValue, v.topValue, v.createdAt].map(val => `"${(val || "").toString().replace(/"/g, '""')}"`).join(",");
-              csv += row + "\n";
-            }
-          }
-        }
-        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = `settings_export_${todayStr()}.csv`;
-        a.click(); URL.revokeObjectURL(url);
-        setMessage("ダウンロードしました。");
-      }
-
-      function parseCSV(text) {
-        const result = []; let row = [], inQuotes = false, val = "";
-        for (let i = 0; i < text.length; i++) {
-          const c = text[i];
-          if (c === '"') {
-            if (inQuotes && text[i+1] === '"') { val += '"'; i++; }
-            else { inQuotes = !inQuotes; }
-          } else if (c === ',' && !inQuotes) { row.push(val); val = ""; }
-          else if ((c === '\n' || c === '\r') && !inQuotes) {
-            if (c === '\r' && text[i+1] === '\n') i++; 
-            row.push(val); val = "";
-            if (row.length > 1 || row[0] !== "") result.push(row);
-            row = [];
-          } else { val += c; }
-        }
-        if (row.length > 0) { row.push(val); result.push(row); }
-        return result;
-      }
-
-      async function importCSV(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-          try {
-            const rows = parseCSV(evt.target.result);
-            if (rows.length < 2) throw new Error("No data");
-            const groups = {};
-            for (let i = 1; i < rows.length; i++) {
-              const r = rows[i]; if (r.length < 16) continue;
-              const [id, machine, itemName, version, date, cost, rate, setter, reason, notes, settingType, leftPower, rightPower, catchValue, topValue, createdAt] = r;
-              if (!groups[id]) groups[id] = { id, machine, itemName, versions: [] };
-              groups[id].versions.push({ version: Number(version), date, cost: Number(cost), rate: Number(rate), setter, reason, notes, settingType, leftPower: leftPower || "", rightPower: rightPower || "", catchValue: catchValue || "", topValue: topValue || "", createdAt });
-            }
-            const newIndex = [];
-            for (const id in groups) {
-              const group = groups[id];
-              group.versions.sort((a, b) => a.version - b.version);
-              await window.storage.set(`group_${id}`, JSON.stringify(group));
-              const latest = group.versions[group.versions.length - 1];
-              newIndex.push({ id, itemName: group.itemName, machine: group.machine, latestDate: latest.date, latestSetter: latest.setter, versionCount: latest.version, latestCost: latest.cost, latestRate: latest.rate });
-            }
-            newIndex.sort((a, b) => new Date(b.latestDate) - new Date(a.latestDate));
-            await window.storage.set("groups_index", JSON.stringify(newIndex));
-            onIndexUpdate(newIndex);
-            setMessage("読み込み完了！");
-          } catch (err) { setMessage("読込失敗。形式を確認してね。"); }
-        };
-        reader.readAsText(file);
-      }
-
-      return (
-        <div className="pb-24">
-          <SectionLabel>CSV出力（バックアップ）</SectionLabel>
-          <button type="button" onClick={exportCSV} className="w-full flex items-center justify-center gap-2 py-4 mb-8 rounded-xl font-bold text-sm shadow-sm" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, color: COLORS.textHi }}>
-            <Download size={18} /> エクスポート
-          </button>
-          <SectionLabel>CSV読込（データの復元）</SectionLabel>
-          <button type="button" onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm shadow-sm" style={{ background: COLORS.magenta, color: "#FFFFFF" }}>
-            <Upload size={18} /> インポート
-          </button>
-          <input type="file" accept=".csv" ref={fileInputRef} onChange={importCSV} className="hidden" />
-          {message && <div className="text-sm mt-4 px-3 py-2 rounded-lg text-center font-bold" style={{ color: COLORS.textHi, background: COLORS.panel2 }}>{message}</div>}
-        </div>
-      );
-    }
-
-    function App() {
-      const [tab, setTab] = useState("new");
-      const [index, setIndex] = useState([]);
-      const [indexLoaded, setIndexLoaded] = useState(false);
-
-      useEffect(() => {
-        (async () => {
-          try {
-            const res = await window.storage.get("groups_index");
-            if (res && res.value) setIndex(JSON.parse(res.value));
-          } catch (e) {} finally { setIndexLoaded(true); }
-        })();
-      }, []);
-
-      const handleSaved = useCallback((newIndex) => { setIndex(newIndex); }, []);
-
-      return (
-        <div className="min-h-screen relative" style={{ background: COLORS.bgVoid }}>
-          <div className="max-w-md mx-auto px-4 pt-8">
-            <div className="mb-6">
-              <div className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: COLORS.magenta }}>Clena / Gemini </div>
-              <h1 className="text-3xl font-extrabold" style={{ color: COLORS.textHi, letterSpacing: "-0.02em" }}>設定管理</h1>
-            </div>
-            {tab === "new" && <NewEntryForm onSaved={handleSaved} />}
-            {tab === "search" && <SearchAndList index={index} indexLoaded={indexLoaded} onOpenGroup={() => {}} />}
-            {tab === "data" && <DataManager index={index} onIndexUpdate={handleSaved} />}
-          </div>
-          
-          {/* ボトムナビゲーション (スマホアプリ風) */}
-          <div className="fixed bottom-0 left-0 right-0 border-t pb-safe" style={{ background: "rgba(255, 255, 255, 0.9)", backdropFilter: "blur(10px)", borderColor: COLORS.border, zIndex: 50 }}>
-            <div className="max-w-md mx-auto flex">
-              <button type="button" onClick={() => setTab("new")} className="flex-1 flex flex-col items-center justify-center gap-1 py-3" style={{ color: tab === "new" ? COLORS.magenta : COLORS.textMid }}>
-                <Plus size={20} strokeWidth={tab === "new" ? 3 : 2} />
-                <span className="text-[10px] font-bold">新規</span>
-              </button>
-              <button type="button" onClick={() => setTab("search")} className="flex-1 flex flex-col items-center justify-center gap-1 py-3" style={{ color: tab === "search" ? COLORS.magenta : COLORS.textMid }}>
-                <Search size={20} strokeWidth={tab === "search" ? 3 : 2} />
-                <span className="text-[10px] font-bold">検索</span>
-              </button>
-              <button type="button" onClick={() => setTab("data")} className="flex-1 flex flex-col items-center justify-center gap-1 py-3" style={{ color: tab === "data" ? COLORS.magenta : COLORS.textMid }}>
-                <Database size={20} strokeWidth={tab === "data" ? 3 : 2} />
-                <span className="text-[10px] font-bold">データ</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const root = createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
-</body>
-</html>
