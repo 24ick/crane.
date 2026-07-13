@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crane-setting-app-v1';
+const CACHE_NAME = 'crane-setting-app-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
