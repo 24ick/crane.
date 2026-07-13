@@ -33,7 +33,6 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef } = React;
 
-    // オフライン耐性をMAXにするため、アイコンを外部から取得せず直接埋め込む
     const Search = ({size=24, color="currentColor", ...p}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>);
     const Plus = ({size=24, color="currentColor", ...p}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>);
     const ChevronLeft = ({size=24, color="currentColor", ...p}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="15 18 9 12 15 6"/></svg>);
@@ -45,15 +44,17 @@
     const Download = ({size=24, color="currentColor", ...p}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>);
     const Upload = ({size=24, color="currentColor", ...p}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>);
     const Loader2 = ({size=24, color="currentColor", ...p}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin" {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>);
+    const Trash2 = ({size=24, color="currentColor", ...p}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>);
 
     if (typeof window !== "undefined" && !window.storage) {
       window.storage = {
         get: async (key) => { const val = localStorage.getItem(key); return val ? { value: val } : null; },
-        set: async (key, value) => { localStorage.setItem(key, value); }
+        set: async (key, value) => { localStorage.setItem(key, value); },
+        remove: async (key) => { localStorage.removeItem(key); }
       };
     }
 
-    const COLORS = { bgVoid: "#FFFFFF", panel: "#FAFAF8", panel2: "#F1EFEA", border: "#E1DED6", magenta: "#4B6B73", magentaDim: "#E4ECEB", cyan: "#7C97A0", cyanDim: "#DEE6E4", textHi: "#2E2C29", textMid: "#8C877C", amber: "#A8763A", green: "#5F8267", screenBg: "#F2F5F4" };
+    const COLORS = { bgVoid: "#FFFFFF", panel: "#FAFAF8", panel2: "#F1EFEA", border: "#E1DED6", magenta: "#4B6B73", magentaDim: "#E4ECEB", cyan: "#7C97A0", cyanDim: "#DEE6E4", textHi: "#2E2C29", textMid: "#8C877C", amber: "#A8763A", green: "#5F8267", screenBg: "#F2F5F4", danger: "#D9534F" };
     const MACHINES = ["クレナハイブリッド", "クレナ3Jack", "クレナ3", "クレナマルチ", "ジェミニマルチ", "ジェミニ80", "デカクレ"];
     const MACHINE_DEFAULT_TYPE = { クレナハイブリッド: "power", "クレナ3Jack": "power", "クレナ3": "power", クレナマルチ: "power", ジェミニマルチ: "catchtop", ジェミニ80: "catchtop", デカクレ: "catchtop" };
 
@@ -304,24 +305,64 @@
         } catch (e) { setMessage({ type: "err", text: "更新に失敗しました。" }); } finally { setSaving(false); }
       }
 
+      // 新しく追加した削除機能
+      async function handleDelete() {
+        if (!window.confirm("この景品のデータを完全に削除しますか？\n※この操作は取り消せません！")) return;
+        setSaving(true);
+        try {
+          let index = [];
+          const res = await window.storage.get("groups_index");
+          if (res && res.value) index = JSON.parse(res.value);
+          
+          const newIndex = index.filter(g => g.id !== groupId);
+          await window.storage.set("groups_index", JSON.stringify(newIndex));
+          
+          if (window.storage.remove) {
+            await window.storage.remove(`group_${groupId}`);
+          } else {
+            localStorage.removeItem(`group_${groupId}`);
+          }
+          
+          onIndexUpdate(newIndex);
+          onBack();
+        } catch (e) {
+          setMessage({ type: "err", text: "削除に失敗しました。" });
+          setSaving(false);
+        }
+      }
+
       return (
         <div className="pb-24">
           <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm mb-4 font-bold" style={{ color: COLORS.textMid }}><ChevronLeft size={16} /> 一覧へ戻る</button>
+          
           {loading && <div className="text-sm py-8 text-center" style={{ color: COLORS.textMid }}>読み込み中…</div>}
           {!loading && !group && <div className="text-sm py-8 text-center" style={{ color: COLORS.amber }}>データが見つかりません。</div>}
+          
           {!loading && group && !editing && (
             <>
               <div className="mb-1 text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.cyan }}>{group.machine}</div>
               <h2 className="text-xl font-bold mb-4" style={{ color: COLORS.textHi }}>{group.itemName}</h2>
               <ReadoutBox cost={group.versions[group.versions.length - 1].cost} rate={group.versions[group.versions.length - 1].rate} />
+              
               <button type="button" onClick={startEdit} className="w-full py-4 rounded-xl font-bold text-sm mb-6 shadow-sm" style={{ background: COLORS.magenta, color: "#FFFFFF" }}>この設定を更新する</button>
+              
               <div className="flex items-center gap-2 mb-3">
                 <History size={16} color={COLORS.cyan} />
                 <span className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.cyan }}>更新履歴（全{group.versions.length}件）</span>
               </div>
+              
               {[...group.versions].reverse().map((v, i) => <HistoryItem key={v.version} version={v} isLatest={i === 0} />)}
+
+              {/* ゴミ箱（削除）ボタン */}
+              <div className="mt-12 pt-6 border-t" style={{ borderColor: COLORS.border }}>
+                <button type="button" onClick={handleDelete} disabled={saving} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-opacity" style={{ color: COLORS.danger, background: "transparent", border: `1px solid ${COLORS.danger}`, opacity: saving ? 0.5 : 1 }}>
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  この景品のデータを削除する
+                </button>
+              </div>
             </>
           )}
+
           {!loading && group && editing && (
             <>
               <h2 className="text-lg font-bold mb-4" style={{ color: COLORS.textHi }}>設定を更新</h2>
@@ -366,6 +407,13 @@
             <TextInput value={query} onChange={e => setQuery(e.target.value)} placeholder="景品名で検索" style={{ paddingLeft: 42 }} />
           </div>
           <div className="mb-4"><Select value={machineFilter} onChange={e => setMachineFilter(e.target.value)} options={["すべて", ...MACHINES]} /></div>
+          
+          {indexLoaded && filtered.length === 0 && (
+            <div className="text-sm py-12 text-center" style={{ color: COLORS.textMid }}>
+              {index.length === 0 ? "まだ設定データがありません。\n「新規」から登録してみましょう。" : "条件に合う景品が見つかりません。"}
+            </div>
+          )}
+
           {indexLoaded && filtered.map(g => (
             <button key={g.id} type="button" onClick={() => onOpenGroup(g.id)} className="w-full text-left rounded-xl p-4 mb-3 shadow-sm active:scale-95 transition-transform" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}` }}>
               <div className="flex justify-between mb-1">
