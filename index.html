@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -13,31 +13,69 @@
   <link rel="apple-touch-icon" href="./icon.svg">
   
   <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div style="padding: 20px; font-family: sans-serif; text-align: center; color: #8C877C;">
+      起動中...<br><br>
+      <div id="debug-log" style="color: red; font-size: 12px; text-align: left; word-break: break-all;"></div>
+    </div>
+  </div>
 
   <script>
+    // エラー監視（真っ白になるのを防ぎ、理由を表示する）
+    window.onerror = function(msg, url, line) {
+      document.getElementById('debug-log').innerText += "\nエラー: " + msg + " (行: " + line + ")";
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      document.getElementById('debug-log').innerText += "\nPromiseエラー: " + (e.reason && e.reason.message ? e.reason.message : String(e.reason));
+    });
+
+    // Service Worker の登録
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .catch(err => console.log('SW failed:', err));
+        navigator.serviceWorker.register('./service-worker.js').catch(err => {
+          document.getElementById('debug-log').innerText += "\nSW登録失敗: " + err;
+        });
       });
     }
   </script>
 
-  <script type="text/babel" data-type="module">
-    import React, { useState, useEffect, useCallback, useRef } from "https://esm.sh/react@18";
-    import { createRoot } from "https://esm.sh/react-dom@18/client";
-    import { Search, Plus, ChevronLeft, ChevronDown, ChevronUp, History, Save, Loader2, Database, Download, Upload } from "https://esm.sh/lucide-react@0.344.0";
+  <script type="text/babel">
+    // Reactの機能を読み込み
+    const { useState, useEffect, useCallback, useRef } = window.React;
 
-    if (typeof window !== "undefined" && !window.storage) {
-      window.storage = {
-        get: async (key) => { const val = localStorage.getItem(key); return val ? { value: val } : null; },
-        set: async (key, value) => { localStorage.setItem(key, value); }
-      };
-    }
+    // ----- アイコンを外部から読み込まず、安全なSVGデータとして直書き -----
+    const Icon = ({ path, size = 18, color = "currentColor", strokeWidth = 2, style }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={style} dangerouslySetInnerHTML={{ __html: path }} />
+    );
+    const ICONS = {
+      Search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+      Plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+      ChevronLeft: '<path d="m15 18-6-6 6-6"/>',
+      ChevronDown: '<path d="m6 9 6 6 6-6"/>',
+      ChevronUp: '<path d="m18 15-6-6-6 6"/>',
+      History: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+      Save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+      Database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
+      Download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+      Upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>'
+    };
+
+    // ----- iOSでのlocalStorageエラー対策を含むストレージ機能 -----
+    window.storage = {
+      get: async (key) => { 
+        try { const val = localStorage.getItem(key); return val ? { value: val } : null; } 
+        catch (e) { throw new Error("保存データにアクセスできませんでした"); }
+      },
+      set: async (key, value) => { 
+        try { localStorage.setItem(key, value); } 
+        catch (e) { throw new Error("データの保存に失敗しました"); }
+      }
+    };
 
     const COLORS = { bgVoid: "#FFFFFF", panel: "#FAFAF8", panel2: "#F1EFEA", border: "#E1DED6", magenta: "#4B6B73", magentaDim: "#E4ECEB", cyan: "#7C97A0", cyanDim: "#DEE6E4", textHi: "#2E2C29", textMid: "#8C877C", amber: "#A8763A", green: "#5F8267", screenBg: "#F2F5F4" };
     const MACHINES = ["クレナハイブリッド", "クレナ3Jack", "クレナ3", "クレナマルチ", "ジェミニマルチ", "ジェミニ80", "デカクレ"];
@@ -62,157 +100,3 @@
       }
       return null;
     }
-    function newId() { return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-
-    function Field({ label, required, children, hint }) {
-      return (
-        <div className="mb-4">
-          <div className="flex items-baseline justify-between mb-1.5">
-            <label className="text-xs font-bold tracking-wider uppercase" style={{ color: COLORS.textMid }}>{label}{required && <span style={{ color: COLORS.magenta }}> *</span>}</label>
-            {hint && <span className="text-xs" style={{ color: COLORS.textMid }}>{hint}</span>}
-          </div>
-          {children}
-        </div>
-      );
-    }
-
-    const inputBase = { width: "100%", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: "10px", padding: "10px 12px", color: COLORS.textHi, fontSize: "16px", outline: "none" };
-    function TextInput(props) { return <input {...props} style={{ ...inputBase, ...(props.style || {}) }} />; }
-    function TextArea(props) { return <textarea {...props} style={{ ...inputBase, resize: "vertical", minHeight: "70px", ...(props.style || {}) }} />; }
-    function Select({ value, onChange, options }) { return <select value={value} onChange={onChange} style={{ ...inputBase, appearance: "none" }}>{options.map(o => <option key={o} value={o}>{o}</option>)}</select>; }
-    function Segmented({ options, value, onChange }) {
-      return (
-        <div className="flex rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORS.border}` }}>
-          {options.map((opt) => {
-            const active = opt.value === value;
-            return <button key={opt.value} type="button" onClick={() => onChange(opt.value)} className="flex-1 py-2.5 text-sm font-bold transition-colors" style={{ background: active ? COLORS.magenta : "transparent", color: active ? "#FFFFFF" : COLORS.textMid }}>{opt.label}</button>;
-          })}
-        </div>
-      );
-    }
-    function SectionLabel({ children }) { return <div className="text-xs font-bold uppercase tracking-widest mb-2 mt-6" style={{ color: COLORS.cyan }}>{children}</div>; }
-
-    function ReadoutBox({ cost, rate }) {
-      const [price100, setPrice100] = useState(100);
-      const [priceSingle, setPriceSingle] = useState(200);
-      const [pricePack, setPricePack] = useState(500);
-      const [packCount, setPackCount] = useState(3);
-      const [showPriceEdit, setShowPriceEdit] = useState(false);
-      const revenue = calcRequiredRevenue(cost, rate);
-      const flat = revenue ? calcFlat(revenue, price100) : null;
-      const pack = revenue ? calcPack(revenue, priceSingle, pricePack, packCount) : null;
-
-      return (
-        <div className="rounded-xl p-4 mb-4" style={{ background: COLORS.screenBg, border: `1px solid ${COLORS.cyanDim}` }}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.cyan }}>計算結果</span>
-            <button type="button" onClick={() => setShowPriceEdit(s => !s)} className="text-xs underline" style={{ color: COLORS.textMid }}>料金設定を編集</button>
-          </div>
-          {showPriceEdit && (
-            <div className="grid grid-cols-2 gap-2 mb-3 pb-3" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <label className="text-xs" style={{ color: COLORS.textMid }}>単価(通常) <TextInput type="number" value={price100} onChange={e => setPrice100(Number(e.target.value))} style={{ marginTop: 4, padding: "6px 8px", fontSize: 16 }} /></label>
-              <label className="text-xs" style={{ color: COLORS.textMid }}>単価(パック側) <TextInput type="number" value={priceSingle} onChange={e => setPriceSingle(Number(e.target.value))} style={{ marginTop: 4, padding: "6px 8px", fontSize: 16 }} /></label>
-              <label className="text-xs" style={{ color: COLORS.textMid }}>パック料金 <TextInput type="number" value={pricePack} onChange={e => setPricePack(Number(e.target.value))} style={{ marginTop: 4, padding: "6px 8px", fontSize: 16 }} /></label>
-              <label className="text-xs" style={{ color: COLORS.textMid }}>パック回数 <TextInput type="number" value={packCount} onChange={e => setPackCount(Number(e.target.value))} style={{ marginTop: 4, padding: "6px 8px", fontSize: 16 }} /></label>
-            </div>
-          )}
-          <div className="mb-3">
-            <div className="text-xs mb-1" style={{ color: COLORS.textMid }}>必要売上</div>
-            <div className="readout-num text-2xl font-bold" style={{ color: COLORS.cyan, fontFamily: "Menlo, monospace" }}>{revenue ? fmtYen(revenue) : "-"}</div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs mb-1" style={{ color: COLORS.textMid }}>1回{price100}円</div>
-              <div className="readout-num text-xl font-bold" style={{ color: COLORS.textHi, fontFamily: "Menlo, monospace" }}>{flat ? `${flat.plays}回` : "-"}</div>
-            </div>
-            <div>
-              <div className="text-xs mb-1" style={{ color: COLORS.textMid }}>{pricePack}円{packCount}回</div>
-              <div className="readout-num text-xl font-bold" style={{ color: COLORS.textHi, fontFamily: "Menlo, monospace" }}>{pack ? `${pack.plays}回` : "-"}</div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function SettingValueFields({ settingType, values, onChange }) {
-      if (settingType === "power") {
-        return (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="左パワー" required><TextInput type="number" inputMode="decimal" value={values.leftPower} onChange={e => onChange({ ...values, leftPower: e.target.value })} placeholder="0" /></Field>
-            <Field label="右パワー" required><TextInput type="number" inputMode="decimal" value={values.rightPower} onChange={e => onChange({ ...values, rightPower: e.target.value })} placeholder="0" /></Field>
-          </div>
-        );
-      }
-      return (
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Catch" required><TextInput type="number" inputMode="decimal" value={values.catchValue} onChange={e => onChange({ ...values, catchValue: e.target.value })} placeholder="0" /></Field>
-          <Field label="Top" required><TextInput type="number" inputMode="decimal" value={values.topValue} onChange={e => onChange({ ...values, topValue: e.target.value })} placeholder="0" /></Field>
-        </div>
-      );
-    }
-
-    function emptyForm() { return { machine: MACHINES[0], itemName: "", date: todayStr(), cost: "", rate: "", setter: "", reason: "", notes: "", settingType: MACHINE_DEFAULT_TYPE[MACHINES[0]], leftPower: "", rightPower: "", catchValue: "", topValue: "" }; }
-
-    function NewEntryForm({ onSaved }) {
-      const [form, setForm] = useState(emptyForm());
-      const [saving, setSaving] = useState(false);
-      const [message, setMessage] = useState(null);
-
-      const update = (patch) => setForm((f) => ({ ...f, ...patch }));
-      const isValid = form.itemName.trim() && form.date && form.cost && form.rate && form.setter.trim() && form.reason.trim() && (form.settingType === "power" ? form.leftPower !== "" && form.rightPower !== "" : form.catchValue !== "" && form.topValue !== "");
-
-      async function handleSave() {
-        if (!isValid || saving) return;
-        setSaving(true); setMessage(null);
-        try {
-          const id = newId();
-          const version = { version: 1, createdAt: new Date().toISOString(), ...form };
-          const groupObj = { id, itemName: form.itemName, machine: form.machine, versions: [version] };
-          await window.storage.set(`group_${id}`, JSON.stringify(groupObj));
-          let index = [];
-          const res = await window.storage.get("groups_index");
-          if (res && res.value) index = JSON.parse(res.value);
-          const summary = { id, itemName: form.itemName, machine: form.machine, latestDate: form.date, latestSetter: form.setter, versionCount: 1, latestCost: form.cost, latestRate: form.rate };
-          const newIndex = [summary, ...index];
-          await window.storage.set("groups_index", JSON.stringify(newIndex));
-          onSaved(newIndex); setForm(emptyForm());
-          setMessage({ type: "ok", text: "保存しました。" }); setTimeout(() => setMessage(null), 3000);
-        } catch (e) { setMessage({ type: "err", text: "保存に失敗しました。" }); } finally { setSaving(false); }
-      }
-
-      return (
-        <div className="pb-24">
-          <SectionLabel>機種</SectionLabel>
-          <Field label="機種" required><Select value={form.machine} onChange={e => update({ machine: e.target.value, settingType: MACHINE_DEFAULT_TYPE[e.target.value] })} options={MACHINES} /></Field>
-          <SectionLabel>基本情報</SectionLabel>
-          <Field label="景品名" required><TextInput value={form.itemName} onChange={e => update({ itemName: e.target.value })} placeholder="例：ちいかわ ぬいぐるみ" /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="設定日" required><TextInput type="date" value={form.date} onChange={e => update({ date: e.target.value })} /></Field>
-            <Field label="設定者" required><TextInput value={form.setter} onChange={e => update({ setter: e.target.value })} /></Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="原価 (円)" required><TextInput type="number" inputMode="numeric" value={form.cost} onChange={e => update({ cost: e.target.value })} /></Field>
-            <Field label="原価率 (%)" required><TextInput type="number" inputMode="numeric" value={form.rate} onChange={e => update({ rate: e.target.value })} /></Field>
-          </div>
-          <ReadoutBox cost={form.cost} rate={form.rate} />
-          <SectionLabel>設定値</SectionLabel>
-          <Field label="タイプ" required><Segmented value={form.settingType} onChange={v => update({ settingType: v })} options={[{ value: "power", label: "左右パワー" }, { value: "catchtop", label: "Catch / Top" }]} /></Field>
-          <SettingValueFields settingType={form.settingType} values={form} onChange={v => update(v)} />
-          <Field label="変更理由" required><TextArea value={form.reason} onChange={e => update({ reason: e.target.value })} /></Field>
-          <Field label="備考"><TextArea value={form.notes} onChange={e => update({ notes: e.target.value })} /></Field>
-          {message && <div className="text-sm mb-4 px-3 py-2 rounded-lg font-bold text-center" style={{ color: message.type === "ok" ? COLORS.green : COLORS.amber, background: COLORS.panel2 }}>{message.text}</div>}
-          <button type="button" disabled={!isValid || saving} onClick={handleSave} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-base shadow-sm" style={{ background: isValid ? COLORS.magenta : COLORS.panel2, color: isValid ? "#FFFFFF" : COLORS.textMid, transition: "0.2s" }}><Save size={18} /> 保存する</button>
-        </div>
-      );
-    }
-
-    function HistoryItem({ version, isLatest }) {
-      const [open, setOpen] = useState(isLatest);
-      const revenue = calcRequiredRevenue(version.cost, version.rate);
-      const flat = revenue ? calcFlat(revenue, 100) : null;
-
-      return (
-        <div className="rounded-xl mb-2 overflow-hidden" style={{ border: `1px solid ${isLatest ? COLORS.magenta : COLORS.border}`, background: COLORS.panel }}>
-          <button type="button" onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-4 py-3">
-            <div className="flex items
-
