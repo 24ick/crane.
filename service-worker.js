@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crane-setting-app-v4';
+const CACHE_NAME = 'crane-setting-app-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -22,12 +22,10 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // キャッシュがあればそれを返す（完全オフライン対応）
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).then((response) => {
-        // 新しいファイルはキャッシュに保存
         if (response && response.status === 200 && response.type !== 'opaque') {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -35,9 +33,7 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return response;
-      }).catch(() => {
-        // オフラインで取得失敗した場合は何もしない
-      });
+      }).catch(() => {});
     })
   );
 });
