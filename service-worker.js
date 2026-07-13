@@ -1,9 +1,13 @@
-const CACHE_NAME = 'crane-setting-app-v3';
+const CACHE_NAME = 'crane-setting-app-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
-  './icon.svg'
+  './icon.svg',
+  'https://cdn.tailwindcss.com',
+  'https://unpkg.com/@babel/standalone/babel.min.js',
+  'https://unpkg.com/react@18/umd/react.production.min.js',
+  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -16,17 +20,24 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
-  // 外部CDN（ReactやBabel等）はエラーの原因になるのでキャッシュせずスルーする
-  if (url.origin !== location.origin) {
-    return;
-  }
-
-  // 自分のサイトのファイルだけキャッシュから返す
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+      // キャッシュがあればそれを返す（完全オフライン対応）
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((response) => {
+        // 新しいファイルはキャッシュに保存
+        if (response && response.status === 200 && response.type !== 'opaque') {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return response;
+      }).catch(() => {
+        // オフラインで取得失敗した場合は何もしない
+      });
     })
   );
 });
