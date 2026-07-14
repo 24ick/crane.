@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crane-setting-app-v5';
+const CACHE_NAME = 'crane-setting-app-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -22,9 +22,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+      if (cachedResponse) return cachedResponse;
       return fetch(event.request).then((response) => {
         if (response && response.status === 200 && response.type !== 'opaque') {
           const responseClone = response.clone();
@@ -43,9 +41,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
+          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
     })
