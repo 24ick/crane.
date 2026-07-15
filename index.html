@@ -539,6 +539,69 @@
       );
     }
 
+    function DetailRow({ label, value }) {
+      if (value === undefined || value === null || value === "") return null;
+      return (
+        <div className="flex justify-between gap-3 py-1.5 text-sm border-b last:border-b-0" style={{ borderColor: COLORS.panel2 }}>
+          <span style={{ color: COLORS.textMid }}>{label}</span>
+          <span className="font-bold text-right" style={{ color: COLORS.textHi }}>{value}</span>
+        </div>
+      );
+    }
+
+    function VersionCard({ v, isLatest }) {
+      const [expanded, setExpanded] = useState(isLatest);
+      const machine = v.machine || "";
+      const isPower = v.settingType ? v.settingType === "power" : isPowerMachine(machine);
+      const costNum = Number(v.cost);
+
+      return (
+        <div className="rounded-xl mb-2 overflow-hidden" style={{ border: `1px solid ${isLatest ? COLORS.magenta : COLORS.border}`, background: COLORS.panel }}>
+          <button type="button" onClick={() => setExpanded(e => !e)} className="w-full text-left px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: isLatest ? COLORS.magentaDim : COLORS.panel2, color: isLatest ? COLORS.magenta : COLORS.textMid }}>v{v.version}</span>
+                <span className="text-sm font-bold" style={{ color: COLORS.textHi }}>{v.date}</span>
+              </div>
+              {expanded ? <ChevronUp size={16} color={COLORS.textMid} /> : <ChevronDown size={16} color={COLORS.textMid} />}
+            </div>
+            <div className="text-sm mt-1" style={{ color: COLORS.textMid }}>設定者：<span style={{ color: COLORS.textHi }}>{v.setter}</span></div>
+          </button>
+          {expanded && (
+            <div className="px-4 pb-4 pt-1" style={{ borderTop: `1px solid ${COLORS.panel2}` }}>
+              <div className="text-sm mt-3 mb-2" style={{ color: COLORS.textMid }}>理由：<span style={{ color: COLORS.textHi }}>{v.reason}</span></div>
+              <div className="rounded-lg px-3" style={{ background: COLORS.panel2 }}>
+                {machine && <DetailRow label="機種" value={machine} />}
+                <DetailRow label="原価" value={costNum ? fmtYen(costNum) : (v.cost || "")} />
+                <DetailRow label="原価率" value={v.rate ? `${v.rate}%` : ""} />
+                {isPower ? (
+                  <>
+                    <DetailRow label="左パワー" value={v.leftPower} />
+                    <DetailRow label="右パワー" value={v.rightPower} />
+                  </>
+                ) : (
+                  <>
+                    <DetailRow label="Catch" value={v.catchValue} />
+                    <DetailRow label="Top" value={v.topValue} />
+                    <DetailRow label="ゴム有無" value={v.rubberBand} />
+                    {v.rubberBand === "あり" && <DetailRow label="ゴム個数" value={v.rubberBandCount} />}
+                  </>
+                )}
+                <DetailRow label="料金設定" value={v.priceSetting === "その他" ? (v.priceSettingOther || "その他") : v.priceSetting} />
+                <DetailRow label="運営方法" value={v.operationMethod === "タグ" ? `タグ (${v.tagSize})` : v.operationMethod} />
+                <DetailRow label="アームサイズ" value={v.armSize} />
+                <DetailRow label="アーム開度" value={v.armOpening ? `${v.armOpening}%` : ""} />
+                <DetailRow label="下降制限" value={v.dropLimit} />
+                <DetailRow label="敷き詰め" value={v.isPacked} />
+                <DetailRow label="データリセット" value={v.dataReset} />
+              </div>
+              {v.notes && <div className="text-sm mt-3" style={{ color: COLORS.textMid }}>備考：<span style={{ color: COLORS.textHi }}>{v.notes}</span></div>}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     function DetailWrapper({ groupId, onBack, onIndexUpdate, appSettings, index }) {
       const [group, setGroup] = useState(null);
       const [loading, setLoading] = useState(true);
@@ -600,14 +663,7 @@
           
           <div className="flex items-center gap-2 mb-3"><History size={16} color={COLORS.cyan} /><span className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.cyan }}>更新履歴（全{group.versions.length}件）</span></div>
           {[...group.versions].reverse().map((v, i) => (
-             <div key={v.version} className="rounded-xl mb-2 overflow-hidden px-4 py-3" style={{ border: `1px solid ${i===0 ? COLORS.magenta : COLORS.border}`, background: COLORS.panel }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: i===0 ? COLORS.magentaDim : COLORS.panel2, color: i===0 ? COLORS.magenta : COLORS.textMid }}>v{v.version}</span>
-                  <span className="text-sm font-bold">{v.date}</span>
-                </div>
-                <div className="text-sm mb-1" style={{ color: COLORS.textMid }}>設定者：<span style={{ color: COLORS.textHi }}>{v.setter}</span></div>
-                <div className="text-sm mb-2" style={{ color: COLORS.textMid }}>理由：<span style={{ color: COLORS.textHi }}>{v.reason}</span></div>
-             </div>
+             <VersionCard key={v.version} v={v} isLatest={i === 0} />
           ))}
           <div className="mt-12 pt-6 border-t" style={{ borderColor: COLORS.border }}>
             <button type="button" onClick={handleDelete} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-opacity" style={{ color: COLORS.danger, border: `1px solid ${COLORS.danger}` }}><Trash2 size={16} /> データを削除する</button>
