@@ -539,12 +539,23 @@
       );
     }
 
-    function DetailRow({ label, value }) {
+    function StatTile({ label, value, accent }) {
       if (value === undefined || value === null || value === "") return null;
       return (
-        <div className="flex justify-between gap-3 py-1.5 text-sm border-b last:border-b-0" style={{ borderColor: COLORS.panel2 }}>
-          <span style={{ color: COLORS.textMid }}>{label}</span>
-          <span className="font-bold text-right" style={{ color: COLORS.textHi }}>{value}</span>
+        <div className="rounded-lg px-2.5 py-1.5 flex items-baseline justify-between gap-2" style={{ background: COLORS.panel2 }}>
+          <span className="text-[10px] font-bold shrink-0" style={{ color: COLORS.textMid }}>{label}</span>
+          <span className="text-sm font-bold truncate text-right" style={{ color: accent || COLORS.textHi }}>{value}</span>
+        </div>
+      );
+    }
+
+    function TileGroup({ title, children }) {
+      const kids = React.Children.toArray(children).filter(Boolean);
+      if (kids.length === 0) return null;
+      return (
+        <div className="mb-2">
+          <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: COLORS.cyan }}>{title}</div>
+          <div className="grid grid-cols-2 gap-1">{kids}</div>
         </div>
       );
     }
@@ -562,40 +573,57 @@
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: isLatest ? COLORS.magentaDim : COLORS.panel2, color: isLatest ? COLORS.magenta : COLORS.textMid }}>v{v.version}</span>
                 <span className="text-sm font-bold" style={{ color: COLORS.textHi }}>{v.date}</span>
+                <span className="text-xs" style={{ color: COLORS.textMid }}>{v.setter}</span>
               </div>
               {expanded ? <ChevronUp size={16} color={COLORS.textMid} /> : <ChevronDown size={16} color={COLORS.textMid} />}
             </div>
-            <div className="text-sm mt-1" style={{ color: COLORS.textMid }}>設定者：<span style={{ color: COLORS.textHi }}>{v.setter}</span></div>
+            {!expanded && <div className="text-xs mt-1 truncate" style={{ color: COLORS.textMid }}>{v.reason}</div>}
           </button>
           {expanded && (
             <div className="px-4 pb-4 pt-1" style={{ borderTop: `1px solid ${COLORS.panel2}` }}>
-              <div className="text-sm mt-3 mb-2" style={{ color: COLORS.textMid }}>理由：<span style={{ color: COLORS.textHi }}>{v.reason}</span></div>
-              <div className="rounded-lg px-3" style={{ background: COLORS.panel2 }}>
-                {machine && <DetailRow label="機種" value={machine} />}
-                <DetailRow label="原価" value={costNum ? fmtYen(costNum) : (v.cost || "")} />
-                <DetailRow label="原価率" value={v.rate ? `${v.rate}%` : ""} />
+              <div className="rounded-lg px-3 py-2 mt-3 mb-2" style={{ background: COLORS.magentaDim }}>
+                <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.magenta }}>変更理由</div>
+                <div className="text-sm font-bold" style={{ color: COLORS.textHi }}>{v.reason || "-"}</div>
+              </div>
+
+              <TileGroup title="基本">
+                <StatTile label="機種" value={machine} />
+                <StatTile label="原価" value={costNum ? fmtYen(costNum) : (v.cost || "")} accent={COLORS.amber} />
+                <StatTile label="原価率" value={v.rate ? `${v.rate}%` : ""} accent={COLORS.amber} />
+              </TileGroup>
+
+              <TileGroup title={isPower ? "パワー設定" : "Catch / Top"}>
                 {isPower ? (
                   <>
-                    <DetailRow label="左パワー" value={v.leftPower} />
-                    <DetailRow label="右パワー" value={v.rightPower} />
+                    <StatTile label="左パワー" value={v.leftPower} accent={COLORS.cyan} />
+                    <StatTile label="右パワー" value={v.rightPower} accent={COLORS.cyan} />
                   </>
                 ) : (
                   <>
-                    <DetailRow label="Catch" value={v.catchValue} />
-                    <DetailRow label="Top" value={v.topValue} />
-                    <DetailRow label="ゴム有無" value={v.rubberBand} />
-                    {v.rubberBand === "あり" && <DetailRow label="ゴム個数" value={v.rubberBandCount} />}
+                    <StatTile label="Catch" value={v.catchValue} accent={COLORS.cyan} />
+                    <StatTile label="Top" value={v.topValue} accent={COLORS.cyan} />
+                    <StatTile label="ゴム有無" value={v.rubberBand} />
+                    {v.rubberBand === "あり" && <StatTile label="ゴム個数" value={v.rubberBandCount} />}
                   </>
                 )}
-                <DetailRow label="料金設定" value={v.priceSetting === "その他" ? (v.priceSettingOther || "その他") : v.priceSetting} />
-                <DetailRow label="運営方法" value={v.operationMethod === "タグ" ? `タグ (${v.tagSize})` : v.operationMethod} />
-                <DetailRow label="アームサイズ" value={v.armSize} />
-                <DetailRow label="アーム開度" value={v.armOpening ? `${v.armOpening}%` : ""} />
-                <DetailRow label="下降制限" value={v.dropLimit} />
-                <DetailRow label="敷き詰め" value={v.isPacked} />
-                <DetailRow label="データリセット" value={v.dataReset} />
-              </div>
-              {v.notes && <div className="text-sm mt-3" style={{ color: COLORS.textMid }}>備考：<span style={{ color: COLORS.textHi }}>{v.notes}</span></div>}
+              </TileGroup>
+
+              <TileGroup title="運用">
+                <StatTile label="料金設定" value={v.priceSetting === "その他" ? (v.priceSettingOther || "その他") : v.priceSetting} />
+                <StatTile label="運営方法" value={v.operationMethod === "タグ" ? `タグ (${v.tagSize})` : v.operationMethod} />
+                <StatTile label="アームサイズ" value={v.armSize} />
+                <StatTile label="アーム開度" value={v.armOpening ? `${v.armOpening}%` : ""} />
+                <StatTile label="下降制限" value={v.dropLimit} />
+                <StatTile label="敷き詰め" value={v.isPacked} />
+                <StatTile label="データリセット" value={v.dataReset} />
+              </TileGroup>
+
+              {v.notes && (
+                <div className="rounded-lg px-3 py-2" style={{ background: COLORS.panel2 }}>
+                  <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.textMid }}>備考</div>
+                  <div className="text-sm" style={{ color: COLORS.textHi }}>{v.notes}</div>
+                </div>
+              )}
             </div>
           )}
         </div>
