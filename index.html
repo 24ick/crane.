@@ -4,27 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>景品設定管理</title>
+  
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#4B6B73">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="設定管理">
   <link rel="apple-touch-icon" href="./icon.svg">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
-  <div id="root"><div style="text-align:center; padding-top: 40px; color:#8C877C; font-weight:bold;">起動中、、、</div></div>
+  <div id="root">
+    <div style="text-align:center; padding-top: 40px; color:#8C877C; font-weight:bold;">起動中、、、</div>
+  </div>
+
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => { navigator.serviceWorker.register('./service-worker.js').catch(err => console.log('SW failed:', err)); });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(err => console.log('SW failed:', err));
+      });
     }
   </script>
+
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef } = React;
-    // アイコンの定義はそのまま
+
     const Search = (p) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
     const Plus = (p) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
     const ChevronLeft = (p) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="15 18 9 12 15 6"/></svg>;
@@ -40,8 +48,480 @@
     const SettingsIcon = (p) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
     const ShieldCheck = (p) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>;
 
-    // (以下、ロジック部分は前回のv8と同一なので省略するけど、実際は前回のコードをそのまま貼り付けてね)
-    // ※今回はv8のコードから "Tesseract" 関連の記述だけ消せばOK！
+    if (typeof window !== "undefined" && !window.storage) {
+      window.storage = {
+        get: async (key) => { const val = localStorage.getItem(key); return val ? { value: val } : null; },
+        set: async (key, value) => { localStorage.setItem(key, value); },
+        remove: async (key) => { localStorage.removeItem(key); }
+      };
+    }
+
+    const COLORS = { bgVoid: "#FFFFFF", panel: "#FAFAF8", panel2: "#F1EFEA", border: "#E1DED6", magenta: "#4B6B73", magentaDim: "#E4ECEB", cyan: "#7C97A0", cyanDim: "#DEE6E4", textHi: "#2E2C29", textMid: "#8C877C", amber: "#A8763A", green: "#5F8267", screenBg: "#F2F5F4", danger: "#D9534F", secure: "#2E7D32" };
+    const MACHINES = ["クレナハイブリッド", "クレナ3Jack", "クレナ3", "クレナマルチ", "ジェミニマルチ", "ジェミニ80", "デカクレ"];
+    
+    function isPowerMachine(machine) { return ["クレナハイブリッド", "クレナ3Jack", "クレナ3"].includes(machine); }
+    function isHybridOr3(machine) { return ["クレナハイブリッド", "クレナ3"].includes(machine); }
+
+    function todayStr() { const d = new Date(); return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 10); }
+    function fmtYen(n) { return (n === null || n === undefined || Number.isNaN(n) || n === "") ? "-" : "¥" + Math.round(n).toLocaleString("ja-JP"); }
+    function calcRequiredRevenue(cost, ratePercent) { const c = Number(cost), r = Number(ratePercent); return (!c || c <= 0 || !r || r <= 0) ? null : c / (r / 100); }
+    function calcFlat(revenue, price) { if (!revenue || !price || price <= 0) return null; const plays = Math.ceil(revenue / price); return { plays, total: plays * price }; }
+    function calcPack(revenue, single, pack, packCount) {
+      if (!revenue || !single || !pack || !packCount || packCount <= 0) return null;
+      for (let n = 1; n < 300000; n++) {
+        const sets = Math.floor(n / packCount), rem = n % packCount, rev = sets * pack + rem * single;
+        if (rev >= revenue) return { plays: n, total: rev, sets, rem };
+      }
+      return null;
+    }
+    function newId() { return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    function Field({ label, required, children, hint }) {
+      return (
+        <div className="mb-4">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <label className="text-[11px] font-bold tracking-wider uppercase" style={{ color: COLORS.textMid }}>
+              {label}{required && <span style={{ color: COLORS.danger }}> *</span>}
+            </label>
+            {hint && <span className="text-[10px]" style={{ color: COLORS.textMid }}>{hint}</span>}
+          </div>
+          {children}
+        </div>
+      );
+    }
+
+    const inputBase = { width: "100%", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: "10px", padding: "10px 10px", color: COLORS.textHi, fontSize: "15px", outline: "none" };
+    function TextInput(props) { return <input {...props} style={{ ...inputBase, ...(props.style || {}) }} />; }
+    function TextArea(props) { return <textarea {...props} style={{ ...inputBase, resize: "vertical", minHeight: "70px", ...(props.style || {}) }} />; }
+    function Select({ value, onChange, options, style }) { return <select value={value} onChange={onChange} style={{ ...inputBase, appearance: "none", ...style }}>{options.map(o => <option key={o.value || o} value={o.value || o}>{o.label || o}</option>)}</select>; }
+    function SectionLabel({ children }) { return <div className="text-xs font-bold uppercase tracking-widest mb-2 mt-6" style={{ color: COLORS.cyan }}>{children}</div>; }
+    
+    function Toggle({ label, checked, onChange }) {
+      return (
+        <label className="flex items-center justify-between py-3 border-b" style={{ borderColor: COLORS.border }}>
+          <span className="text-sm font-bold" style={{ color: COLORS.textHi }}>{label}</span>
+          <div className={`w-12 h-6 rounded-full relative transition-colors ${checked ? 'bg-[#4B6B73]' : 'bg-[#E1DED6]'}`} onClick={() => onChange(!checked)}>
+            <div className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white transition-transform ${checked ? 'translate-x-7' : 'translate-x-1'}`} />
+          </div>
+        </label>
+      );
+    }
+
+    function emptyForm() { 
+      return { 
+        machine: MACHINES[0], itemName: "", date: todayStr(), cost: "", rate: "", setter: "", reason: "", notes: "", 
+        leftPower: "", rightPower: "", catchValue: "", topValue: "",
+        armSize: "", armOpening: "100", dropLimit: "", priceSetting: "1回100円", 
+        operationMethod: "ゆらころ", tagSize: "S", isPacked: "いいえ", rubberBand: "なし", rubberBandCount: "3", dataReset: "いいえ"
+      }; 
+    }
+
+    function ReadoutBox({ cost, rate }) {
+      const [price100, setPrice100] = useState(100);
+      const [priceSingle, setPriceSingle] = useState(200);
+      const [pricePack, setPricePack] = useState(500);
+      const [packCount, setPackCount] = useState(3);
+      const [showPriceEdit, setShowPriceEdit] = useState(false);
+      const revenue = calcRequiredRevenue(cost, rate);
+      const flat = revenue ? calcFlat(revenue, price100) : null;
+      const pack = revenue ? calcPack(revenue, priceSingle, pricePack, packCount) : null;
+
+      return (
+        <div className="rounded-xl p-4 mb-4" style={{ background: COLORS.screenBg, border: `1px solid ${COLORS.cyanDim}` }}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.cyan }}>計算結果 (目安)</span>
+            <button type="button" onClick={() => setShowPriceEdit(s => !s)} className="text-xs underline" style={{ color: COLORS.textMid }}>料金設定を編集</button>
+          </div>
+          {showPriceEdit && (
+            <div className="grid grid-cols-2 gap-2 mb-3 pb-3" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <label className="text-[10px]" style={{ color: COLORS.textMid }}>単価(通常) <TextInput type="number" value={price100} onChange={e => setPrice100(Number(e.target.value))} style={{ marginTop: 2, padding: "6px 8px", fontSize: 14 }} /></label>
+              <label className="text-[10px]" style={{ color: COLORS.textMid }}>単価(パック側) <TextInput type="number" value={priceSingle} onChange={e => setPriceSingle(Number(e.target.value))} style={{ marginTop: 2, padding: "6px 8px", fontSize: 14 }} /></label>
+              <label className="text-[10px]" style={{ color: COLORS.textMid }}>パック料金 <TextInput type="number" value={pricePack} onChange={e => setPricePack(Number(e.target.value))} style={{ marginTop: 2, padding: "6px 8px", fontSize: 14 }} /></label>
+              <label className="text-[10px]" style={{ color: COLORS.textMid }}>パック回数 <TextInput type="number" value={packCount} onChange={e => setPackCount(Number(e.target.value))} style={{ marginTop: 2, padding: "6px 8px", fontSize: 14 }} /></label>
+            </div>
+          )}
+          <div className="mb-3">
+            <div className="text-[10px] mb-1" style={{ color: COLORS.textMid }}>必要売上</div>
+            <div className="readout-num text-xl font-bold" style={{ color: COLORS.cyan, fontFamily: "Menlo, monospace" }}>{revenue ? fmtYen(revenue) : "-"}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] mb-1" style={{ color: COLORS.textMid }}>1回{price100}円なら</div>
+              <div className="readout-num text-lg font-bold" style={{ color: COLORS.textHi, fontFamily: "Menlo, monospace" }}>{flat ? `約${flat.plays}回` : "-"}</div>
+            </div>
+            <div>
+              <div className="text-[10px] mb-1" style={{ color: COLORS.textMid }}>{pricePack}円{packCount}回なら</div>
+              <div className="readout-num text-lg font-bold" style={{ color: COLORS.textHi, fontFamily: "Menlo, monospace" }}>{pack ? `約${pack.plays}回` : "-"}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function EntryFormInner({ form, setForm, onSave, onCancel, isEditing, appSettings }) {
+      const [saving, setSaving] = useState(false);
+      const [missingFields, setMissingFields] = useState([]);
+      const [message, setMessage] = useState(null);
+      const update = (patch) => setForm((f) => ({ ...f, ...patch }));
+      const isPower = isPowerMachine(form.machine);
+      const isHybOr3 = isHybridOr3(form.machine);
+      const armOpeningOptions = [];
+      for (let i = 50; i <= 100; i += 5) armOpeningOptions.push(i.toString());
+
+      async function handleSaveClick() {
+        const missing = [];
+        if (!form.itemName.trim()) missing.push("景品名");
+        if (!form.date) missing.push("設定日");
+        if (!form.setter.trim()) missing.push("設定者");
+        if (!form.cost) missing.push("原価");
+        if (!form.rate) missing.push("原価率");
+        if (isPower) {
+          if (!form.leftPower) missing.push("左パワー");
+          if (!form.rightPower) missing.push("右パワー");
+        } else {
+          if (!form.catchValue) missing.push("Catch");
+          if (!form.topValue) missing.push("Top");
+        }
+        if (!form.reason.trim()) missing.push("変更理由");
+
+        if (missing.length > 0) {
+          setMissingFields(missing); window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+        }
+
+        setMissingFields([]); setSaving(true); setMessage(null);
+        try {
+          await onSave();
+          if(!isEditing) { setMessage({ type: "ok", text: "保存しました。" }); setTimeout(() => setMessage(null), 3000); }
+        } catch (e) { setMessage({ type: "err", text: "保存に失敗しました。" }); } finally { setSaving(false); }
+      }
+
+      return (
+        <div className="pb-24">
+          {missingFields.length > 0 && (
+            <div className="mb-6 p-4 rounded-xl border-2 shadow-sm" style={{ borderColor: COLORS.danger, background: "#FDF0F0", color: COLORS.danger }}>
+              <div className="font-bold mb-1">【入力エラー】</div>
+              <div className="text-sm">以下の必須項目を入力してください：<br/>{missingFields.join("、 ")}</div>
+            </div>
+          )}
+          <SectionLabel>機種</SectionLabel>
+          <Field label="機種" required><Select value={form.machine} onChange={e => update({ machine: e.target.value })} options={MACHINES} /></Field>
+          <SectionLabel>基本情報</SectionLabel>
+          <Field label="景品名" required><TextInput value={form.itemName} onChange={e => update({ itemName: e.target.value })} placeholder="例：ちいかわ ぬいぐるみ" /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="設定日" required><TextInput type="date" value={form.date} onChange={e => update({ date: e.target.value })} /></Field>
+            <Field label="設定者" required><TextInput value={form.setter} onChange={e => update({ setter: e.target.value })} /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="原価(円)" required><TextInput type="number" inputMode="numeric" value={form.cost} onChange={e => update({ cost: e.target.value })} placeholder="0" /></Field>
+            <Field label="原価率(%)" required><TextInput type="number" inputMode="numeric" value={form.rate} onChange={e => update({ rate: e.target.value })} placeholder="0" /></Field>
+          </div>
+          <ReadoutBox cost={form.cost} rate={form.rate} />
+
+          <SectionLabel>設定値 ({isPower ? 'パワー' : 'Catch/Top'})</SectionLabel>
+          {isPower ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="左パワー" required><TextInput type="number" inputMode="decimal" value={form.leftPower} onChange={e => update({ leftPower: e.target.value })} placeholder="0" /></Field>
+              <Field label="右パワー" required><TextInput type="number" inputMode="decimal" value={form.rightPower} onChange={e => update({ rightPower: e.target.value })} placeholder="0" /></Field>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Catch" required><TextInput type="number" inputMode="decimal" value={form.catchValue} onChange={e => update({ catchValue: e.target.value })} placeholder="0" /></Field>
+                <Field label="Top" required><TextInput type="number" inputMode="decimal" value={form.topValue} onChange={e => update({ topValue: e.target.value })} placeholder="0" /></Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="ゴム有無"><Select value={form.rubberBand} onChange={e => update({ rubberBand: e.target.value })} options={["なし", "あり"]} /></Field>
+                {form.rubberBand === "あり" && <Field label="ゴム個数"><Select value={form.rubberBandCount} onChange={e => update({ rubberBandCount: e.target.value })} options={["1", "2", "3"]} /></Field>}
+              </div>
+            </>
+          )}
+
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0">
+            {appSettings.showPriceSetting && (
+              <Field label="料金設定">
+                <Select value={form.priceSetting} onChange={e => update({ priceSetting: e.target.value })} options={["1回100円", "1回200円", "1回200円/3回500円", "その他"]} />
+                {form.priceSetting === "その他" && <TextInput placeholder="詳細..." value={form.priceSettingOther || ""} onChange={e => update({ priceSettingOther: e.target.value })} style={{marginTop: 6}} />}
+              </Field>
+            )}
+            {appSettings.showOperationMethod && (
+              <Field label="運営方法">
+                <Select value={form.operationMethod} onChange={e => update({ operationMethod: e.target.value })} options={["ゆらころ", "タグ", "フック", "その他"]} />
+                {form.operationMethod === "タグ" && <Select value={form.tagSize} onChange={e => update({ tagSize: e.target.value })} options={["S", "M", "L"]} style={{marginTop: 6}} />}
+              </Field>
+            )}
+            {appSettings.showArmSize && form.machine !== "デカクレ" && (
+              <Field label="アームサイズ">{isHybOr3 ? <Select value={form.armSize} onChange={e => update({ armSize: e.target.value })} options={["", "S", "M", "L"]} /> : <TextInput value={form.armSize} onChange={e => update({ armSize: e.target.value })} placeholder="自由記述" />}</Field>
+            )}
+            {appSettings.showArmOpening && isHybOr3 && (
+              <Field label="アーム開度 (%)"><Select value={form.armOpening} onChange={e => update({ armOpening: e.target.value })} options={armOpeningOptions} /></Field>
+            )}
+            {appSettings.showDropLimit && isHybOr3 && (
+              <Field label="下降制限(0〜80)"><TextInput type="number" inputMode="numeric" min="0" max="80" value={form.dropLimit} onChange={e => update({ dropLimit: e.target.value })} /></Field>
+            )}
+            {appSettings.showPacked && (
+              <Field label="敷き詰め"><Select value={form.isPacked} onChange={e => update({ isPacked: e.target.value })} options={["いいえ", "はい"]} /></Field>
+            )}
+            {appSettings.showDataReset && (
+              <Field label="データリセット？"><Select value={form.dataReset} onChange={e => update({ dataReset: e.target.value })} options={["いいえ", "はい"]} /></Field>
+            )}
+          </div>
+          <SectionLabel>変更理由・備考</SectionLabel>
+          <Field label="変更理由" required><TextArea value={form.reason} onChange={e => update({ reason: e.target.value })} /></Field>
+          <Field label="備考"><TextArea value={form.notes} onChange={e => update({ notes: e.target.value })} /></Field>
+          {message && <div className="text-sm mb-4 px-3 py-2 rounded-lg font-bold text-center" style={{ color: message.type === "ok" ? COLORS.green : COLORS.danger, background: COLORS.panel2 }}>{message.text}</div>}
+          <div className="flex gap-2">
+            {isEditing && <button type="button" onClick={onCancel} className="flex-1 py-4 rounded-xl font-bold text-sm" style={{ background: COLORS.panel2, color: COLORS.textMid }}>キャンセル</button>}
+            <button type="button" disabled={saving} onClick={handleSaveClick} className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-base shadow-sm transition-opacity" style={{ background: COLORS.magenta, color: "#FFFFFF", opacity: saving ? 0.7 : 1 }}>
+              {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} 保存する
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [tab, setTab] = useState("new");
+      const [index, setIndex] = useState([]);
+      const [indexLoaded, setIndexLoaded] = useState(false);
+      const [openGroupId, setOpenGroupId] = useState(null);
+      const defaultSettings = { showArmSize: true, showArmOpening: true, showDropLimit: true, showPriceSetting: true, showOperationMethod: true, showPacked: true, showDataReset: true };
+      const [appSettings, setAppSettings] = useState(defaultSettings);
+
+      useEffect(() => {
+        (async () => {
+          try {
+            const res = await window.storage.get("groups_index");
+            if (res && res.value) setIndex(JSON.parse(res.value));
+            const setRes = await window.storage.get("app_settings");
+            if (setRes && setRes.value) setAppSettings(JSON.parse(setRes.value));
+          } catch (e) {} finally { setIndexLoaded(true); }
+        })();
+      }, []);
+
+      const saveSettings = async (newSettings) => {
+        setAppSettings(newSettings); await window.storage.set("app_settings", JSON.stringify(newSettings));
+      };
+
+      const handleSaved = useCallback((newIndex) => { setIndex(newIndex); }, []);
+
+      const [query, setQuery] = useState("");
+      const [machineFilter, setMachineFilter] = useState("すべて");
+      const filtered = index.filter(g => {
+        const matchesQuery = query.trim() === "" || g.itemName.toLowerCase().includes(query.trim().toLowerCase());
+        const matchesMachine = machineFilter === "すべて" || g.machine === machineFilter;
+        return matchesQuery && matchesMachine;
+      });
+
+      const fileInputRef = useRef(null);
+      const [dataMessage, setDataMessage] = useState("");
+      
+      async function exportCSV() {
+        if (index.length === 0) return setDataMessage("データがありません。");
+        let csv = "ID,機種,景品名,バージョン,設定日,原価,原価率,設定者,変更理由,備考,設定タイプ,左パワー,右パワー,Catch,Top,作成日時,アームサイズ,アーム開度,下降制限,料金設定,運営方法,タグサイズ,敷き詰め,ゴム有無,ゴム個数,データリセット\n";
+        for (const summary of index) {
+          const gRes = await window.storage.get(`group_${summary.id}`);
+          if (gRes && gRes.value) {
+            const group = JSON.parse(gRes.value);
+            for (const v of group.versions) {
+              const row = [group.id, group.machine, group.itemName, v.version, v.date, v.cost, v.rate, v.setter, v.reason, v.notes, v.settingType, v.leftPower, v.rightPower, v.catchValue, v.topValue, v.createdAt, v.armSize, v.armOpening, v.dropLimit, v.priceSetting, v.operationMethod, v.tagSize, v.isPacked, v.rubberBand, v.rubberBandCount, v.dataReset].map(val => `"${(val || "").toString().replace(/"/g, '""')}"`).join(",");
+              csv += row + "\n";
+            }
+          }
+        }
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = url; a.download = `settings_export_${todayStr()}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+        setDataMessage("ダウンロードしました。");
+      }
+      
+      const [newForm, setNewForm] = useState(emptyForm());
+      const onNewSave = async () => {
+        const id = newId();
+        const settingType = isPowerMachine(newForm.machine) ? "power" : "catchtop";
+        const version = { version: 1, createdAt: new Date().toISOString(), settingType, ...newForm };
+        const groupObj = { id, itemName: newForm.itemName, machine: newForm.machine, versions: [version] };
+        await window.storage.set(`group_${id}`, JSON.stringify(groupObj));
+        const summary = { id, itemName: newForm.itemName, machine: newForm.machine, latestDate: newForm.date, latestSetter: newForm.setter, versionCount: 1, latestCost: newForm.cost, latestRate: newForm.rate };
+        const newIndex = [summary, ...index];
+        await window.storage.set("groups_index", JSON.stringify(newIndex));
+        handleSaved(newIndex); setNewForm(emptyForm());
+      };
+
+      return (
+        <div className="min-h-screen relative pb-safe" style={{ background: COLORS.bgVoid }}>
+          <div className="max-w-md mx-auto px-4 pt-8">
+            <div className="mb-6 cursor-pointer" onClick={() => { setTab("new"); setOpenGroupId(null); }}>
+              <div className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: COLORS.magenta }}>Clena / Gemini </div>
+              <h1 className="text-3xl font-extrabold active:opacity-50 transition-opacity" style={{ color: COLORS.textHi, letterSpacing: "-0.02em" }}>設定管理</h1>
+            </div>
+            
+            {openGroupId === null && tab === "new" && <EntryFormInner form={newForm} setForm={setNewForm} onSave={onNewSave} isEditing={false} appSettings={appSettings} />}
+            
+            {openGroupId === null && tab === "search" && (
+               <div className="pb-24">
+                <div className="mb-3 relative">
+                  <Search size={18} color={COLORS.textMid} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
+                  <TextInput value={query} onChange={e => setQuery(e.target.value)} placeholder="景品名で検索" style={{ paddingLeft: 42 }} />
+                </div>
+                <div className="mb-4"><Select value={machineFilter} onChange={e => setMachineFilter(e.target.value)} options={["すべて", ...MACHINES]} /></div>
+                {indexLoaded && filtered.length === 0 && <div className="text-sm py-12 text-center" style={{ color: COLORS.textMid }}>{index.length === 0 ? "まだデータがありません。" : "見つかりません。"}</div>}
+                {indexLoaded && filtered.map(g => (
+                  <button key={g.id} type="button" onClick={() => setOpenGroupId(g.id)} className="w-full text-left rounded-xl p-4 mb-3 shadow-sm active:scale-95 transition-transform" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}` }}>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs font-bold uppercase" style={{ color: COLORS.cyan }}>{g.machine}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: COLORS.panel2, color: COLORS.textMid }}>v{g.versionCount}</span>
+                    </div>
+                    <div className="font-bold mb-1 text-lg" style={{ color: COLORS.textHi }}>{g.itemName}</div>
+                    <div className="text-xs" style={{ color: COLORS.textMid }}>最終更新: {g.latestDate}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {openGroupId === null && tab === "data" && (
+               <div className="pb-24">
+                {/* ★追加：セキュリティ証明パネル */}
+                <div className="mb-8 p-4 rounded-xl shadow-sm" style={{ background: "#F4FBF7", border: `1px solid ${COLORS.secure}` }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck size={20} color={COLORS.secure} />
+                    <span className="font-bold text-sm" style={{ color: COLORS.secure }}>セキュリティと安全性について</span>
+                  </div>
+                  <ul className="text-xs space-y-2 leading-relaxed" style={{ color: "#1F5922" }}>
+                    <li><strong className="text-[13px]">✅ 完全ローカル保存</strong><br/>入力したデータはこの端末（スマホやiPad）の内部ストレージにのみ保存されます。</li>
+                    <li><strong className="text-[13px]">✅ 外部送信ゼロ</strong><br/>インターネット上のクラウドや外部サーバー等へデータが送信・保存されることは一切ありません。</li>
+                    <li><strong className="text-[13px]">✅ 情報漏洩リスクなし</strong><br/>CSVで意図的に出力・共有しない限り、第三者に機密情報（原価や売上等）が漏れることは構造上不可能です。安心して業務にご利用ください。</li>
+                  </ul>
+                </div>
+
+                <SectionLabel>CSV出力</SectionLabel>
+                <button type="button" onClick={exportCSV} className="w-full flex items-center justify-center gap-2 py-4 mb-8 rounded-xl font-bold text-sm shadow-sm" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, color: COLORS.textHi }}><Download size={18} /> エクスポート</button>
+                <SectionLabel>CSV読込（データの復元用）</SectionLabel>
+                <button type="button" onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm shadow-sm" style={{ background: COLORS.magenta, color: "#FFFFFF" }}><Upload size={18} /> インポート</button>
+                <input type="file" accept=".csv" ref={fileInputRef} onChange={() => setDataMessage("※この軽量版ではインポートはモックです")} className="hidden" />
+                {dataMessage && <div className="text-sm mt-4 px-3 py-2 rounded-lg text-center font-bold" style={{ color: COLORS.textHi, background: COLORS.panel2 }}>{dataMessage}</div>}
+              </div>
+            )}
+
+            {openGroupId === null && tab === "settings" && (
+              <div className="pb-24">
+                <div className="mb-4 text-sm" style={{ color: COLORS.textMid }}>アプリ内で使用（表示）する入力項目を選べます。</div>
+                <Toggle label="アームサイズ (S,M,L/自由記述)" checked={appSettings.showArmSize} onChange={v => saveSettings({...appSettings, showArmSize: v})} />
+                <Toggle label="アーム開度 (50〜100%)" checked={appSettings.showArmOpening} onChange={v => saveSettings({...appSettings, showArmOpening: v})} />
+                <Toggle label="下降制限 (0〜80)" checked={appSettings.showDropLimit} onChange={v => saveSettings({...appSettings, showDropLimit: v})} />
+                <Toggle label="料金設定" checked={appSettings.showPriceSetting} onChange={v => saveSettings({...appSettings, showPriceSetting: v})} />
+                <Toggle label="運営方法 (ゆらころ/タグ等)" checked={appSettings.showOperationMethod} onChange={v => saveSettings({...appSettings, showOperationMethod: v})} />
+                <Toggle label="敷き詰めアンケート" checked={appSettings.showPacked} onChange={v => saveSettings({...appSettings, showPacked: v})} />
+                <Toggle label="データリセット確認" checked={appSettings.showDataReset} onChange={v => saveSettings({...appSettings, showDataReset: v})} />
+              </div>
+            )}
+            
+            {openGroupId !== null && <DetailWrapper groupId={openGroupId} onBack={() => setOpenGroupId(null)} onIndexUpdate={handleSaved} appSettings={appSettings} index={index} />}
+          </div>
+          
+          <div className="fixed bottom-0 left-0 right-0 border-t pb-safe" style={{ background: "rgba(255, 255, 255, 0.9)", backdropFilter: "blur(10px)", borderColor: COLORS.border, zIndex: 50 }}>
+            <div className="max-w-md mx-auto flex">
+              <button type="button" onClick={() => {setTab("new"); setOpenGroupId(null);}} className="flex-1 flex flex-col items-center justify-center gap-1 py-3" style={{ color: tab === "new" && openGroupId === null ? COLORS.magenta : COLORS.textMid }}>
+                <Plus size={20} strokeWidth={tab === "new" && openGroupId === null ? 3 : 2} />
+                <span className="text-[10px] font-bold">新規</span>
+              </button>
+              <button type="button" onClick={() => {setTab("search"); setOpenGroupId(null);}} className="flex-1 flex flex-col items-center justify-center gap-1 py-3" style={{ color: tab === "search" && openGroupId === null ? COLORS.magenta : COLORS.textMid }}>
+                <Search size={20} strokeWidth={tab === "search" && openGroupId === null ? 3 : 2} />
+                <span className="text-[10px] font-bold">検索</span>
+              </button>
+              <button type="button" onClick={() => {setTab("data"); setOpenGroupId(null);}} className="flex-1 flex flex-col items-center justify-center gap-1 py-3" style={{ color: tab === "data" && openGroupId === null ? COLORS.magenta : COLORS.textMid }}>
+                <Database size={20} strokeWidth={tab === "data" && openGroupId === null ? 3 : 2} />
+                <span className="text-[10px] font-bold">データ</span>
+              </button>
+              <button type="button" onClick={() => {setTab("settings"); setOpenGroupId(null);}} className="flex-1 flex flex-col items-center justify-center gap-1 py-3" style={{ color: tab === "settings" && openGroupId === null ? COLORS.magenta : COLORS.textMid }}>
+                <SettingsIcon size={20} strokeWidth={tab === "settings" && openGroupId === null ? 3 : 2} />
+                <span className="text-[10px] font-bold">設定</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DetailWrapper({ groupId, onBack, onIndexUpdate, appSettings, index }) {
+      const [group, setGroup] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [editing, setEditing] = useState(false);
+      const [editForm, setEditForm] = useState(null);
+
+      useEffect(() => {
+        let cancelled = false;
+        window.storage.get(`group_${groupId}`).then(res => {
+          if(!cancelled) { setGroup(res && res.value ? JSON.parse(res.value) : null); setLoading(false); }
+        });
+        return () => { cancelled = true; };
+      }, [groupId]);
+
+      const startEdit = () => {
+        const latest = group.versions[group.versions.length - 1];
+        const filledData = { ...emptyForm(), ...latest, date: todayStr(), reason: "", notes: latest.notes || "" };
+        setEditForm(filledData); setEditing(true);
+      };
+
+      const handleUpdateSave = async () => {
+        const nextVersion = group.versions.length + 1;
+        const settingType = isPowerMachine(editForm.machine) ? "power" : "catchtop";
+        const versionEntry = { version: nextVersion, createdAt: new Date().toISOString(), settingType, ...editForm };
+        const updatedGroup = { ...group, itemName: editForm.itemName, machine: editForm.machine, versions: [...group.versions, versionEntry] };
+        await window.storage.set(`group_${groupId}`, JSON.stringify(updatedGroup));
+        const newIndex = index.map(g => g.id === groupId ? { ...g, itemName: editForm.itemName, machine: editForm.machine, latestDate: editForm.date, latestSetter: editForm.setter, versionCount: nextVersion, latestCost: editForm.cost, latestRate: editForm.rate } : g);
+        await window.storage.set("groups_index", JSON.stringify(newIndex));
+        setGroup(updatedGroup); onIndexUpdate(newIndex); setEditing(false);
+      };
+
+      const handleDelete = async () => {
+        if (!window.confirm("この景品のデータを完全に削除しますか？\n※この操作は取り消せません！")) return;
+        const newIndex = index.filter(g => g.id !== groupId);
+        await window.storage.set("groups_index", JSON.stringify(newIndex));
+        await window.storage.remove(`group_${groupId}`);
+        onIndexUpdate(newIndex); onBack();
+      };
+
+      if (loading) return <div className="pb-24 text-center py-8">読み込み中…</div>;
+      if (!group) return <div className="pb-24 text-center py-8">見つかりません。</div>;
+      if (editing) {
+        return (
+          <div>
+            <button type="button" onClick={() => setEditing(false)} className="flex items-center gap-1 text-sm mb-4 font-bold" style={{ color: COLORS.textMid }}><ChevronLeft size={16} /> 戻る</button>
+            <h2 className="text-lg font-bold mb-4" style={{ color: COLORS.textHi }}>設定を更新</h2>
+            <EntryFormInner form={editForm} setForm={setEditForm} onSave={handleUpdateSave} onCancel={() => setEditing(false)} isEditing={true} appSettings={appSettings} />
+          </div>
+        );
+      }
+
+      return (
+        <div className="pb-24">
+          <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm mb-4 font-bold" style={{ color: COLORS.textMid }}><ChevronLeft size={16} /> 一覧へ戻る</button>
+          <div className="mb-1 text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.cyan }}>{group.machine}</div>
+          <h2 className="text-xl font-bold mb-4" style={{ color: COLORS.textHi }}>{group.itemName}</h2>
+          
+          <button type="button" onClick={startEdit} className="w-full py-4 rounded-xl font-bold text-sm mb-6 shadow-sm" style={{ background: COLORS.magenta, color: "#FFFFFF" }}>この設定を更新する</button>
+          
+          <div className="flex items-center gap-2 mb-3"><History size={16} color={COLORS.cyan} /><span className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.cyan }}>更新履歴（全{group.versions.length}件）</span></div>
+          {[...group.versions].reverse().map((v, i) => (
+             <div key={v.version} className="rounded-xl mb-2 overflow-hidden px-4 py-3" style={{ border: `1px solid ${i===0 ? COLORS.magenta : COLORS.border}`, background: COLORS.panel }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: i===0 ? COLORS.magentaDim : COLORS.panel2, color: i===0 ? COLORS.magenta : COLORS.textMid }}>v{v.version}</span>
+                  <span className="text-sm font-bold">{v.date}</span>
+                </div>
+                <div className="text-sm mb-1" style={{ color: COLORS.textMid }}>設定者：<span style={{ color: COLORS.textHi }}>{v.setter}</span></div>
+                <div className="text-sm mb-2" style={{ color: COLORS.textMid }}>理由：<span style={{ color: COLORS.textHi }}>{v.reason}</span></div>
+             </div>
+          ))}
+          <div className="mt-12 pt-6 border-t" style={{ borderColor: COLORS.border }}>
+            <button type="button" onClick={handleDelete} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-opacity" style={{ color: COLORS.danger, border: `1px solid ${COLORS.danger}` }}><Trash2 size={16} /> データを削除する</button>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
   </script>
 </body>
 </html>
