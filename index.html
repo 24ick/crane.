@@ -315,6 +315,102 @@
       const fileInputRef = useRef(null);
       const [dataMessage, setDataMessage] = useState("");
       
+      async function handleImportCSV(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const text = event.target.result;
+            const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+            if (lines.length <= 1) {
+              setDataMessage("データがありません。");
+              return;
+            }
+
+            const groups = {}; 
+
+            for (let i = 1; i < lines.length; i++) {
+              let cols = [];
+              let current = '';
+              let inQuotes = false;
+              for (let char of lines[i]) {
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { cols.push(current); current = ''; }
+                else current += char;
+              }
+              cols.push(current);
+              cols = cols.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+
+              if (cols.length < 26) continue; 
+
+              const [id, machine, itemName, versionStr, date, cost, rate, setter, reason, notes, settingType, leftPower, rightPower, catchValue, topValue, createdAt, armSize, armOpening, dropLimit, priceSetting, operationMethod, tagSize, isPacked, rubberBand, rubberBandCount, dataReset] = cols;
+
+              if (!id || !itemName) continue;
+
+              if (!groups[id]) {
+                groups[id] = { id, itemName, machine, versions: [] };
+              }
+
+              groups[id].versions.push({
+                version: Number(versionStr) || 1,
+                date, cost, rate, setter, reason, notes, settingType, leftPower, rightPower, catchValue, topValue, createdAt, armSize, armOpening, dropLimit, priceSetting, operationMethod, tagSize, isPacked, rubberBand, rubberBandCount, dataReset
+              });
+            }
+
+            const newIndex = [];
+            const idsProcessed = Object.keys(groups);
+            
+            if (idsProcessed.length === 0) {
+              setDataMessage("有効なデータが読み込めませんでした。");
+              return;
+            }
+
+            for (const id of idsProcessed) {
+              const g = groups[id];
+              g.versions.sort((a, b) => a.version - b.version);
+              const latest = g.versions[g.versions.length - 1];
+              
+              await window.storage.set(`group_${id}`, JSON.stringify(g));
+              
+              newIndex.push({
+                id,
+                itemName: g.itemName,
+                machine: g.machine,
+                latestDate: latest.date,
+                latestSetter: latest.setter,
+                versionCount: latest.version,
+                latestCost: latest.cost,
+                latestRate: latest.rate
+              });
+            }
+
+            const existingRes = await window.storage.get("groups_index");
+            let existingIndex = [];
+            if (existingRes && existingRes.value) existingIndex = JSON.parse(existingRes.value);
+
+            const mergedIndexMap = new Map(existingIndex.map(item => [item.id, item]));
+            for (const item of newIndex) {
+              mergedIndexMap.set(item.id, item);
+            }
+            
+            const finalIndex = Array.from(mergedIndexMap.values());
+            finalIndex.sort((a, b) => new Date(b.latestDate) - new Date(a.latestDate));
+
+            await window.storage.set("groups_index", JSON.stringify(finalIndex));
+            setIndex(finalIndex);
+            setDataMessage(`インポート完了！ ${idsProcessed.length}件の景品データを復元しました。`);
+
+          } catch (err) {
+            console.error(err);
+            setDataMessage("エラーが発生しました。ファイル形式を確認してください。");
+          }
+          e.target.value = ''; 
+        };
+        reader.readAsText(file);
+      }
+
       async function exportCSV() {
         if (index.length === 0) return setDataMessage("データがありません。");
         let csv = "ID,機種,景品名,バージョン,設定日,原価,原価率,設定者,変更理由,備考,設定タイプ,左パワー,右パワー,Catch,Top,作成日時,アームサイズ,アーム開度,下降制限,料金設定,運営方法,タグサイズ,敷き詰め,ゴム有無,ゴム個数,データリセット\n";
@@ -398,7 +494,7 @@
                 <button type="button" onClick={exportCSV} className="w-full flex items-center justify-center gap-2 py-4 mb-8 rounded-xl font-bold text-sm shadow-sm" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, color: COLORS.textHi }}><Download size={18} /> エクスポート</button>
                 <SectionLabel>CSV読込（データの復元用）</SectionLabel>
                 <button type="button" onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm shadow-sm" style={{ background: COLORS.magenta, color: "#FFFFFF" }}><Upload size={18} /> インポート</button>
-                <input type="file" accept=".csv" ref={fileInputRef} onChange={() => setDataMessage("※この軽量版ではインポートはモックです")} className="hidden" />
+                <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
                 {dataMessage && <div className="text-sm mt-4 px-3 py-2 rounded-lg text-center font-bold" style={{ color: COLORS.textHi, background: COLORS.panel2 }}>{dataMessage}</div>}
               </div>
             )}
