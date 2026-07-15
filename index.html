@@ -8,40 +8,44 @@
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#4B6B73">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="設定管理">
+  <link rel="apple-touch-icon" href="./icon.svg">
   
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
-
-  <style>
-    body { background-color: #FAFAF8; color: #2E2C29; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
-  </style>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
   <div id="root">
-    <div style="text-align:center; padding-top: 50px; color:#8C877C; font-weight:bold; line-height: 2;">
-      【最新版】アプリを起動中...<br>
-      <span style="font-size: 12px; font-weight: normal;">※この画面から進まない場合は、ブラウザの「更新」を押すか、キャッシュをクリアしてください。</span>
-    </div>
+    <div style="text-align:center; padding-top: 40px; color:#8C877C; font-weight:bold;">起動中、、、</div>
   </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(err => console.log('SW failed:', err));
+      });
+    }
+  </script>
 
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // --- 定数・アイコン ---
+    // --- 定数とアイコン定義 ---
     const MACHINES = ["クレナハイブリッド", "クレナ3Jack", "クレナ3", "クレナマルチ", "ジェミニマルチ", "ジェミニ80", "デカクレ"];
-    
-    const IconSearch = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
-    const IconPlus = () => <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-    const IconChevronLeft = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
-    const IconSave = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
-    const IconTrash = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
-    const IconSettings = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
-    const IconDownload = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-    const IconUpload = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+    const COLORS = { magenta: "#4B6B73", textHi: "#2E2C29", textMid: "#8C877C", panel: "#FAFAF8", border: "#E1DED6", danger: "#D9534F" };
 
-    // --- メインアプリ ---
+    const IconSearch = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+    const IconPlus = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+    const IconChevronLeft = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
+    const IconSave = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
+    const IconTrash = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+    const IconDownload = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+    const IconUpload = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+
+    // --- メインアプリコンポーネント ---
     function App() {
       const [view, setView] = useState('list');
       const [items, setItems] = useState([]);
@@ -51,23 +55,9 @@
         id: null, booth: '', machine: MACHINES[0], prize: '', power: '', memo: ''
       });
 
-      // データの読み込み
       useEffect(() => {
-        try {
-          const savedData = localStorage.getItem('crane_app_data') || localStorage.getItem('crane_app_data_v1');
-          if (savedData) {
-            let parsed = JSON.parse(savedData);
-            if (parsed && !Array.isArray(parsed)) {
-              if (Array.isArray(parsed.value)) parsed = parsed.value;
-              else if (Array.isArray(parsed.data)) parsed = parsed.data;
-              else parsed = [];
-            }
-            if (Array.isArray(parsed)) setItems(parsed);
-          }
-        } catch (e) {
-          console.error("データの読み込みエラー:", e);
-          setItems([]);
-        }
+        const savedData = localStorage.getItem('crane_app_data');
+        if (savedData) setItems(JSON.parse(savedData));
       }, []);
 
       const saveToLocal = (newItems) => {
@@ -92,32 +82,30 @@
       };
 
       const handleDelete = (id) => {
-        if (window.confirm('本当に削除しますか？')) {
+        if (window.confirm('本当にこの設定を削除しますか？')) {
           saveToLocal(items.filter(item => item.id !== id));
           setView('list');
         }
       };
 
+      // 【修正】CSVエクスポート（カンマ対応）
       const exportCSV = () => {
-        if (items.length === 0) {
-          alert("出力するデータがありません。");
-          return;
-        }
-        const headers = ["ID", "ブース番号", "機種", "景品名", "パワー設定", "メモ", "最終更新日"];
+        const headers = ["ブース番号", "機種", "景品名", "パワー設定", "メモ", "最終更新日"];
         const rows = items.map(i => [
-          i.id, i.booth, i.machine, i.prize, i.power, i.memo, i.updatedAt ? new Date(i.updatedAt).toLocaleString('ja-JP') : ''
-        ].map(val => `"${String(val || '').replace(/"/g, '""')}"`));
+          i.booth, i.machine, i.prize, i.power, i.memo, new Date(i.updatedAt).toLocaleString('ja-JP')
+        ].map(val => `"${(val || '').toString().replace(/"/g, '""')}"`)); // データにカンマがあっても崩れないようにダブルクォーテーションで囲む
         
         const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(",")].concat(rows.map(e => e.join(","))).join("\n");
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `crane_settings.csv`);
+        link.setAttribute("download", "crane_settings.csv");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       };
 
+      // 【新規】本物のCSVインポート処理
       const importCSV = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -126,11 +114,16 @@
         reader.onload = (event) => {
           const text = event.target.result;
           const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-          if (lines.length <= 1) { alert('データがありません。'); return; }
+          
+          if (lines.length <= 1) {
+            alert('データが見つかりませんでした。');
+            return;
+          }
 
           const newItems = [];
           const timestamp = new Date().toISOString();
 
+          // 行ごとに解析
           for (let i = 1; i < lines.length; i++) {
             let cols = [];
             let current = '';
@@ -143,14 +136,14 @@
             cols.push(current);
             cols = cols.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
 
-            if (cols.length >= 4 && cols[1] && cols[3]) { 
+            if (cols.length >= 3 && cols[0] && cols[2]) { // 最低限ブース番号と景品名が必要
               newItems.push({
-                id: cols[0] && cols[0].length > 5 ? cols[0] : Date.now().toString() + i,
-                booth: String(cols[1]),
-                machine: MACHINES.includes(cols[2]) ? cols[2] : MACHINES[0],
-                prize: String(cols[3]),
-                power: cols[4] || '',
-                memo: cols[5] || '',
+                id: Date.now().toString() + i, // かぶらないIDを生成
+                booth: cols[0],
+                machine: MACHINES.includes(cols[1]) ? cols[1] : MACHINES[0],
+                prize: cols[2],
+                power: cols[3] || '',
+                memo: cols[4] || '',
                 createdAt: timestamp,
                 updatedAt: timestamp
               });
@@ -158,38 +151,41 @@
           }
 
           if (newItems.length > 0) {
-            if (window.confirm(`${newItems.length}件のデータを追加・上書きしますか？`)) {
-              const mergedItems = [...items];
-              newItems.forEach(newItem => {
-                const idx = mergedItems.findIndex(item => item.id === newItem.id);
-                if (idx >= 0) mergedItems[idx] = newItem; else mergedItems.push(newItem);
-              });
-              saveToLocal(mergedItems);
-              alert('インポート完了！');
+            if (window.confirm(`${newItems.length}件のデータを追加でインポートしますか？\n（現在のデータに上書きではなく追加されます）`)) {
+              saveToLocal([...items, ...newItems]);
+              alert('インポートが完了しました！');
             }
+          } else {
+            alert('有効なデータが読み込めませんでした。CSVの形式を確認してください。');
           }
         };
         reader.readAsText(file);
-        e.target.value = ''; 
+        e.target.value = ''; // 連続で同じファイルを読めるようにリセット
       };
 
-      // 検索フィルター
       const filteredItems = items.filter(item => 
-        String(item.booth || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-        String(item.prize || '').toLowerCase().includes(searchQuery.toLowerCase())
+        item.booth.includes(searchQuery) || item.prize.includes(searchQuery)
       );
 
-      if (view === 'list') {
-        return (
-          <div className="min-h-screen pb-24 max-w-md mx-auto">
-            <div className="sticky top-0 bg-[#FAFAF8] px-4 pt-6 pb-4 border-b border-[#E1DED6] flex justify-between items-center z-10">
-              <h1 className="text-2xl font-extrabold text-[#4B6B73]">景品設定管理</h1>
-              <button onClick={() => setView('settings')} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full transition-colors">
-                <IconSettings />
-              </button>
-            </div>
+      return (
+        <div className="min-h-screen bg-[#FAFAF8] text-[#2E2C29] pb-24">
+          {view === 'list' && (
+            <div className="p-4 max-w-md mx-auto">
+              
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold" style={{ color: COLORS.magenta }}>設定一覧</h1>
+                <div className="flex gap-2">
+                  {/* インポート用隠しファイル入力 */}
+                  <input type="file" id="csv-upload" style={{ display: 'none' }} accept=".csv" onChange={importCSV} />
+                  <button onClick={() => document.getElementById('csv-upload').click()} className="p-2 rounded-lg bg-blue-100 text-blue-700 flex items-center gap-1 text-sm font-bold shadow-sm">
+                    <IconUpload /> 読込
+                  </button>
+                  <button onClick={exportCSV} className="p-2 rounded-lg bg-gray-200 text-gray-700 flex items-center gap-1 text-sm font-bold shadow-sm">
+                    <IconDownload /> 出力
+                  </button>
+                </div>
+              </div>
 
-            <div className="p-4">
               <div className="relative mb-6">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                   <IconSearch />
@@ -199,143 +195,89 @@
                   placeholder="ブース番号や景品名で検索..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:border-[#4B6B73] focus:ring-2 focus:ring-[#4B6B73]/50 shadow-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:border-[#4B6B73] focus:ring-1 focus:ring-[#4B6B73]"
                 />
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {filteredItems.length === 0 ? (
-                  <div className="text-center text-gray-400 py-12">
-                    <p>データがありません</p>
-                    <p className="text-sm mt-1">右下の＋ボタンから追加してください</p>
-                  </div>
+                  <p className="text-center text-gray-500 py-8">データがありません</p>
                 ) : (
                   filteredItems.map(item => (
-                    <div 
-                      key={item.id} 
-                      onClick={() => { setFormData(item); setView('form'); }} 
-                      className="bg-white p-4 rounded-xl border border-[#E1DED6] shadow-sm cursor-pointer active:scale-[0.98] transition-transform"
-                    >
+                    <div key={item.id} onClick={() => { setFormData(item); setView('form'); }} className="bg-white p-4 rounded-xl border border-[#E1DED6] shadow-sm cursor-pointer hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-2">
-                        <span className="bg-[#4B6B73] text-white text-xs font-bold px-2.5 py-1 rounded-md">
-                          ブース {item.booth}
-                        </span>
-                        <span className="text-xs text-gray-400">{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('ja-JP') : ''}</span>
+                        <span className="bg-[#4B6B73] text-white text-xs font-bold px-2 py-1 rounded">ブース {item.booth}</span>
+                        <span className="text-xs text-gray-500">{new Date(item.updatedAt).toLocaleDateString('ja-JP')}</span>
                       </div>
-                      <h3 className="font-bold text-lg mb-1">{item.prize}</h3>
-                      <p className="text-sm text-gray-500">{item.machine} | P: {item.power || '未設定'}</p>
+                      <h3 className="font-bold text-lg">{item.prize}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{item.machine} | パワー: {item.power || '未設定'}</p>
                     </div>
                   ))
                 )}
               </div>
-            </div>
 
-            <button 
-              onClick={() => { setFormData({ id: null, booth: '', machine: MACHINES[0], prize: '', power: '', memo: '' }); setView('form'); }}
-              className="fixed bottom-6 right-6 w-14 h-14 bg-[#4B6B73] text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl active:scale-95 transition-all"
-            >
-              <IconPlus />
-            </button>
-          </div>
-        );
-      }
-
-      if (view === 'form') {
-        return (
-          <div className="min-h-screen bg-white max-w-md mx-auto">
-            <div className="sticky top-0 bg-white px-4 py-4 border-b border-[#E1DED6] flex items-center justify-between z-10">
-              <button onClick={() => setView('list')} className="p-2 -ml-2 text-gray-600 active:bg-gray-100 rounded-full transition-colors">
-                <IconChevronLeft />
+              <button 
+                onClick={() => { setFormData({ id: null, booth: '', machine: MACHINES[0], prize: '', power: '', memo: '' }); setView('form'); }}
+                className="fixed bottom-6 right-6 w-14 h-14 bg-[#4B6B73] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+              >
+                <IconPlus />
               </button>
-              <h2 className="text-lg font-bold">{formData.id ? '設定を編集' : '新規登録'}</h2>
-              <div className="w-10"></div>
             </div>
+          )}
 
-            <div className="p-5 space-y-5">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">ブース番号 <span className="text-red-500">*</span></label>
-                <input type="text" value={formData.booth} onChange={e => setFormData({...formData, booth: e.target.value})} className="w-full p-3.5 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white focus:border-[#4B6B73] outline-none" placeholder="例: 01" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">景品名 <span className="text-red-500">*</span></label>
-                <input type="text" value={formData.prize} onChange={e => setFormData({...formData, prize: e.target.value})} className="w-full p-3.5 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white focus:border-[#4B6B73] outline-none" placeholder="景品の名前" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">機種</label>
-                <select value={formData.machine} onChange={e => setFormData({...formData, machine: e.target.value})} className="w-full p-3.5 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white outline-none">
-                  {MACHINES.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+          {view === 'form' && (
+            <div className="p-4 max-w-md mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <button onClick={() => setView('list')} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full">
+                  <IconChevronLeft />
+                </button>
+                <h2 className="text-xl font-bold">{formData.id ? '設定を編集' : '新規設定登録'}</h2>
+                <div className="w-10"></div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">パワー設定</label>
-                <input type="text" value={formData.power} onChange={e => setFormData({...formData, power: e.target.value})} className="w-full p-3.5 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white outline-none" placeholder="例: L:30 R:30 B:40" />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold mb-1">ブース番号 <span className="text-red-500">*</span></label>
+                  <input type="text" value={formData.booth} onChange={e => setFormData({...formData, booth: e.target.value})} className="w-full p-3 rounded-xl border border-gray-300" placeholder="例: 01" />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold mb-1">景品名 <span className="text-red-500">*</span></label>
+                  <input type="text" value={formData.prize} onChange={e => setFormData({...formData, prize: e.target.value})} className="w-full p-3 rounded-xl border border-gray-300" placeholder="景品の名前" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-1">機種</label>
+                  <select value={formData.machine} onChange={e => setFormData({...formData, machine: e.target.value})} className="w-full p-3 rounded-xl border border-gray-300 bg-white">
+                    {MACHINES.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-1">パワー設定</label>
+                  <input type="text" value={formData.power} onChange={e => setFormData({...formData, power: e.target.value})} className="w-full p-3 rounded-xl border border-gray-300" placeholder="例: L:30 R:30 B:40" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-1">メモ</label>
+                  <textarea value={formData.memo} onChange={e => setFormData({...formData, memo: e.target.value})} className="w-full p-3 rounded-xl border border-gray-300 h-32" placeholder="設定のコツなど"></textarea>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">メモ</label>
-                <textarea value={formData.memo} onChange={e => setFormData({...formData, memo: e.target.value})} className="w-full p-3.5 rounded-xl border border-gray-300 bg-gray-50 focus:bg-white outline-none h-32 resize-none" placeholder="攻略法など..."></textarea>
-              </div>
-
-              <div className="pt-4 flex gap-3 pb-8">
-                <button onClick={handleSave} className="flex-1 py-4 bg-[#4B6B73] text-white rounded-xl font-bold flex justify-center items-center gap-2 shadow-md active:scale-95">
+              <div className="mt-8 flex gap-3">
+                <button onClick={handleSave} className="flex-1 py-4 bg-[#4B6B73] text-white rounded-xl font-bold flex justify-center items-center gap-2">
                   <IconSave /> 保存する
                 </button>
                 {formData.id && (
-                  <button onClick={() => handleDelete(formData.id)} className="px-5 py-4 bg-[#FFF0F0] text-[#D9534F] rounded-xl font-bold flex justify-center items-center border border-[#FFD6D6] active:scale-95">
+                  <button onClick={() => handleDelete(formData.id)} className="px-4 py-4 bg-red-100 text-red-600 rounded-xl font-bold flex justify-center items-center">
                     <IconTrash />
                   </button>
                 )}
               </div>
             </div>
-          </div>
-        );
-      }
-
-      if (view === 'settings') {
-        return (
-          <div className="min-h-screen bg-[#FAFAF8] max-w-md mx-auto">
-            <div className="sticky top-0 bg-[#FAFAF8] px-4 py-4 border-b border-[#E1DED6] flex items-center justify-between z-10">
-              <button onClick={() => setView('list')} className="p-2 -ml-2 text-gray-600 active:bg-gray-200 rounded-full transition-colors">
-                <IconChevronLeft />
-              </button>
-              <h2 className="text-lg font-bold">データ管理</h2>
-              <div className="w-10"></div>
-            </div>
-
-            <div className="p-5 space-y-6">
-              <div className="bg-white p-5 rounded-xl border border-[#E1DED6] shadow-sm">
-                <h3 className="font-bold mb-4 text-gray-800 border-b pb-2">CSVデータ連携</h3>
-                <div className="space-y-3">
-                  <button onClick={exportCSV} className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold flex justify-center items-center gap-2">
-                    <IconDownload /> CSV形式で出力
-                  </button>
-                  <input type="file" id="csv-upload-settings" style={{ display: 'none' }} accept=".csv" onChange={importCSV} />
-                  <button onClick={() => document.getElementById('csv-upload-settings').click()} className="w-full py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold flex justify-center items-center gap-2">
-                    <IconUpload /> CSVを読み込む
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-[#FFF0F0] p-5 rounded-xl border border-[#FFD6D6] shadow-sm">
-                 <h3 className="font-bold mb-4 text-[#D9534F] border-b border-[#FFD6D6] pb-2">危険な操作</h3>
-                 <button onClick={() => {
-                   if(window.confirm('本当にすべてのデータを消去しますか？\nこの操作は取り消せません。')) {
-                     saveToLocal([]);
-                     alert('全データを削除しました。');
-                     setView('list');
-                   }
-                 }} className="w-full py-3 bg-white text-[#D9534F] border border-[#D9534F] rounded-lg font-bold flex justify-center items-center gap-2">
-                    <IconTrash /> 全データを初期化
-                  </button>
-              </div>
-            </div>
-          </div>
-        );
-      }
-      return null;
+          )}
+        </div>
+      );
     }
 
     ReactDOM.createRoot(document.getElementById("root")).render(<App />);
